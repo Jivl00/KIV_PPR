@@ -25,7 +25,7 @@ void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2,
  * @param r - right index
  * @param policy - execution policy
  */
-void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r, std::string policy);
+void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r, const std::string& policy);
 
 /**
  * Merge and count function for the last iteration of merge sort algorithm - counts sum and sum of squared elements
@@ -38,7 +38,7 @@ void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r, std:
  * @param policy - execution policy
  */
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r,
-                     double &sum, double &sum2, std::string policy);
+                     double &sum, double &sum2, const std::string& policy);
 
 /**
  * Merge sort algorithm
@@ -48,4 +48,4 @@ void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r,
  * @param policy - execution policy
  * @return 0 if successful, 1 otherwise
  */
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, std::string policy);
+int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const std::string& policy);
