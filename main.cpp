@@ -5,8 +5,8 @@
 #include <execution>
 
 #include "my_utils.h"
-#include "dataLoader.h"
-#include "mergeSort.h"
+#include "data_loader.h"
+#include "merge_sort.h"
 #include "statistics.h"
 
 constexpr std::string DATA_FILE = "ACC_001.csv";
@@ -15,7 +15,7 @@ constexpr std::string DATA_FILE = "ACC_001.csv";
 int main() {
     // Load data from file
     struct data data;
-    auto [load_time, load_ret] = measure_time(loadAccData, DATA_FILE, data);
+    auto [load_time, load_ret] = measure_time(load_data_ser, DATA_FILE, data);
     if (load_ret == EXIT_SUCCESS) {
         std::cout << "Data loaded in " << load_time << " seconds" << std::endl;
     } else {

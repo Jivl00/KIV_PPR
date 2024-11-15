@@ -1,4 +1,4 @@
-#include "mergeSort.h"
+#include "merge_sort.h"
 
 
 void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2, const std::vector<double> &L,

@@ -1,6 +1,6 @@
-#include "dataLoader.h"
+#include "data_loader.h"
 
-int loadAccData(const std::string &filename, data &data) {
+int load_data_ser(const std::string &filename, data &data) {
     FILE *file = fopen(filename.c_str(), "r");
     if (!file) {
         std::cerr << "File " << filename << " not found" << std::endl;
@@ -46,3 +46,5 @@ int loadAccData(const std::string &filename, data &data) {
     fclose(file);
     return EXIT_SUCCESS;
 }
+
+

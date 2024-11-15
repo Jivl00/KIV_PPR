@@ -1,5 +1,5 @@
 #include "statistics.h"
-#include "mergeSort.h"
+#include "merge_sort.h"
 
 int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const std::string& policy) {
     std::string policy_type = policy.substr(0, policy.find('_')), policy_vec = policy.substr(policy.find('_') + 1);

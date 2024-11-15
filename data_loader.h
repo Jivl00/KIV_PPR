@@ -22,4 +22,4 @@ struct data {
  * @param data Data structure to store the loaded data
  * @return EXIT_SUCCESS if the data was loaded successfully, EXIT_FAILURE otherwise
  */
-int loadAccData(const std::string &filename, data &data);
+int load_data_ser(const std::string &filename, data &data);

@@ -7,11 +7,11 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -fopenmp -Wall")
 include_directories(.)
 
 add_executable(SP
-        mergeSort.cpp
-        mergeSort.h
+        merge_sort.cpp
+        merge_sort.h
         main.cpp
-        dataLoader.h
-        dataLoader.cpp
+        data_loader.h
+        data_loader.cpp
         my_utils.cpp
         my_utils.h
         statistics.cpp
