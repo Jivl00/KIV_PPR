@@ -8,10 +8,6 @@
 #include <fstream>
 #include <sstream>
 
-#include <windows.h>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/stat.h>
 
 /** 1 KB */
 constexpr size_t KB = 1 << 10;

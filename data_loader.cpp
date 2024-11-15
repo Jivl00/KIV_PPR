@@ -1,88 +1,164 @@
 #include "data_loader.h"
 
 int load_data_ser(const std::string &filename, data &data) {
-    FILE *file = fopen(filename.c_str(), "r");
-    if (!file) {
-        std::cerr << "File " << filename << " not found" << std::endl;
-        return EXIT_FAILURE;
-    }
-    // Clean the data
-    data.x.clear();
-    data.y.clear();
-    data.z.clear();
-
-    // Set buffer size to 8MB
-    const size_t bufferSize = 8 * MB;
-    setvbuf(file, nullptr, _IOFBF, bufferSize);
-
-
-    char line[256];
-    fgets(line, sizeof(line), file); // Skip header
-
-    data.x.reserve(20 * MB);
-    data.y.reserve(20 * MB);
-    data.z.reserve(20 * MB);
-
-    while (fgets(line, sizeof(line), file)) {
-        char *line_ptr = line;
-        while (*line_ptr && *line_ptr != ',') // Skip timestamp
-            line_ptr++;
-        line_ptr++; // Skip comma
-
-        double accX = std::strtod(line_ptr, &line_ptr); // Read X
-        line_ptr++; // Skip comma
-
-        double accY = std::strtod(line_ptr, &line_ptr); // Read Y
-        line_ptr++; // Skip comma
-
-        double accZ = std::strtod(line_ptr, &line_ptr); // Read Z
-
-
-        data.x.emplace_back(accX);
-        data.y.emplace_back(accY);
-        data.z.emplace_back(accZ);
-    }
-
-    fclose(file);
-    return EXIT_SUCCESS;
-}
-
-
-int load_data_par(const std::string &filename, data &data) {
-
-    // Open the file in binary mode
+    // open the file in binary mode
     FILE *file = fopen(filename.c_str(), "rb");
     if (!file) {
         std::cerr << "Error opening file: " << filename << std::endl;
         return EXIT_FAILURE;
     }
 
-    // Get file size
+    // get file size
     fseek(file, 0, SEEK_END);
     size_t fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    // Read the entire file into a buffer
+    // read the entire file into a buffer
     char *buffer = new char[fileSize + 1];  // +1 for null-terminator
     fread(buffer, 1, fileSize, file);
     fclose(file);
 
     buffer[fileSize] = '\0';  // Null-terminate the string
 
-    // Parse the buffer into lines
-    std::vector<std::string> lines;
+    // parse the buffer into lines
+    std::vector<std::string_view> lines;
     size_t startIdx = 0;
     for (size_t i = 0; i < fileSize; ++i) {
         if (buffer[i] == '\n') {
             lines.emplace_back(buffer + startIdx, i - startIdx);
-            startIdx = i + 1;  // Move past the newline character
+            startIdx = i + 1;  // move past the newline character
         }
     }
 
-    // Handle the last line (if any)
+    // handle the last line (if any)
     if (startIdx < fileSize) {
         lines.emplace_back(buffer + startIdx);
     }
+
+    // skip the header
+    lines.erase(lines.begin());
+
+
+    // clean the data
+    data.x.clear();
+    data.y.clear();
+    data.z.clear();
+
+    // reserve memory for the data - number of lines
+    size_t numLines = lines.size();
+    data.x.resize(numLines);
+    data.y.resize(numLines);
+    data.z.resize(numLines);
+
+    for (size_t i = 0; i < lines.size(); ++i) {
+        const char* line_ptr = lines[i].data();
+
+        // Skip the timestamp
+        while (*line_ptr && *line_ptr != ',') // move past the timestamp
+            line_ptr++;
+        line_ptr++; // move past the comma
+
+        // Parse x
+        double x = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
+        line_ptr++; // move past the comma
+
+        // Parse y
+        double y = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
+        line_ptr++; // move past the comma
+
+        // Parse z
+        double z = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
+
+        // Add x, y, z to the data
+        data.x[i] = x;
+        data.y[i] = y;
+        data.z[i] = z;
+    }
+
+
+    // Clean up
+    delete[] buffer;
+
+    return EXIT_SUCCESS;
+}
+
+
+int load_data_par(const std::string &filename, data &data) {
+    // open the file in binary mode
+    FILE *file = fopen(filename.c_str(), "rb");
+    if (!file) {
+        std::cerr << "Error opening file: " << filename << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // get file size
+    fseek(file, 0, SEEK_END);
+    size_t fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    // read the entire file into a buffer
+    char *buffer = new char[fileSize + 1];  // +1 for null-terminator
+    fread(buffer, 1, fileSize, file);
+    fclose(file);
+
+    buffer[fileSize] = '\0';  // Null-terminate the string
+
+    // parse the buffer into lines
+    std::vector<std::string_view> lines;
+    size_t startIdx = 0;
+    for (size_t i = 0; i < fileSize; ++i) {
+        if (buffer[i] == '\n') {
+            lines.emplace_back(buffer + startIdx, i - startIdx);
+            startIdx = i + 1;  // move past the newline character
+        }
+    }
+
+    // handle the last line (if any)
+    if (startIdx < fileSize) {
+        lines.emplace_back(buffer + startIdx);
+    }
+
+    // skip the header
+    lines.erase(lines.begin());
+
+
+    // clean the data
+    data.x.clear();
+    data.y.clear();
+    data.z.clear();
+
+    // reserve memory for the data - number of lines
+    size_t numLines = lines.size();
+    data.x.resize(numLines);
+    data.y.resize(numLines);
+    data.z.resize(numLines);
+#pragma omp parallel for schedule(static)
+    for (size_t i = 0; i < lines.size(); ++i) {
+        std::string_view line = lines[i];
+        size_t pos = 0;
+
+        // Skip the timestamp
+        pos = line.find(',') + 1;
+
+        // Parse x
+        size_t next_pos = line.find(',', pos);
+        double x = std::stod(std::string(line.substr(pos, next_pos - pos)));
+        pos = next_pos + 1;
+
+        // Parse y
+        next_pos = line.find(',', pos);
+        double y = std::stod(std::string(line.substr(pos, next_pos - pos)));
+        pos = next_pos + 1;
+
+        // Parse z
+        double z = std::stod(std::string(line.substr(pos)));
+
+        // Add x, y, z to the data
+        data.x[i] = x;
+        data.y[i] = y;
+        data.z[i] = z;
+    }
+
 
     // Clean up
     delete[] buffer;
@@ -91,66 +167,7 @@ int load_data_par(const std::string &filename, data &data) {
 }
 
 //int load_data_par(const std::string &filename, data &data) {
-//    HANDLE hFile = CreateFile(filename.c_str(), GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-//    if (hFile == INVALID_HANDLE_VALUE) {
-//        std::cerr << "File " << filename << " not found" << std::endl;
-//        return EXIT_FAILURE;
-//    }
-//
-//    LARGE_INTEGER fileSize;
-//    if (!GetFileSizeEx(hFile, &fileSize)) {
-//        std::cerr << "Could not get file size" << std::endl;
-//        CloseHandle(hFile);
-//        return EXIT_FAILURE;
-//    }
-//
-//    HANDLE hMapFile = CreateFileMapping(hFile, nullptr, PAGE_READONLY, 0, 0, nullptr);
-//    if (hMapFile == nullptr) {
-//        std::cerr << "Could not create file mapping" << std::endl;
-//        CloseHandle(hFile);
-//        return EXIT_FAILURE;
-//    }
-//
-//    char *fileData = static_cast<char*>(MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0));
-//    if (fileData == nullptr) {
-//        std::cerr << "Could not map view of file" << std::endl;
-//        CloseHandle(hMapFile);
-//        CloseHandle(hFile);
-//        return EXIT_FAILURE;
-//    }
-//
-//    CloseHandle(hMapFile);
-//    CloseHandle(hFile);
-//
-//    // Clean the data
-//    data.x.clear();
-//    data.y.clear();
-//    data.z.clear();
-//
-//    // Read all lines into memory
-//    std::vector<std::string> lines;
-//    char *lineStart = fileData;
-//    for (size_t i = 0; i < fileSize.QuadPart; ++i) {
-//        if (fileData[i] == '\n') {
-//            lines.emplace_back(lineStart, &fileData[i]);
-//            lineStart = &fileData[i + 1];
-//        }
-//    }
-//
-//    UnmapViewOfFile(fileData);
-//
-//    // Skip header
-//    if (!lines.empty()) {
-//        lines.erase(lines.begin());
-//    }
-//
-//    std::cout << "Read " << lines.size() << " lines" << std::endl;
-//
-//    return EXIT_SUCCESS;
-//}
-
-//int load_data_par(const std::string &filename, data &data) {
-//    std::vector<std::string> lines;
+//    std::vector<std::string_view> lines;
 //
 //    // Open the file for reading
 //    std::ifstream file(filename, std::ios::binary);
