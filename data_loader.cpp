@@ -1,6 +1,6 @@
 #include "data_loader.h"
 
-int load_data_ser(const std::string &filename, data &data) {
+int load_data(const std::string &filename, data &data) {
     // open the file in binary mode
     FILE *file = fopen(filename.c_str(), "rb");
     if (!file) {
@@ -10,98 +10,21 @@ int load_data_ser(const std::string &filename, data &data) {
 
     // get file size
     fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
+    size_t file_size = ftell(file);
     fseek(file, 0, SEEK_SET);
 
     // read the entire file into a buffer
-    char *buffer = new char[fileSize];
-    fread(buffer, 1, fileSize, file);
-    fclose(file);
-
-
-    // parse the buffer into lines
-    std::vector<std::string_view> lines;
-    size_t startIdx = 0;
-    for (size_t i = 0; i < fileSize; ++i) {
-        if (buffer[i] == '\n') {
-            lines.emplace_back(buffer + startIdx, i - startIdx);
-            startIdx = i + 1;  // move past the newline character
-        }
-    }
-
-    // skip the header
-    lines.erase(lines.begin());
-
-
-    // clean the data
-    data.x.clear();
-    data.y.clear();
-    data.z.clear();
-
-    // reserve memory for the data - number of lines
-    size_t numLines = lines.size();
-    data.x.resize(numLines);
-    data.y.resize(numLines);
-    data.z.resize(numLines);
-
-    for (size_t i = 0; i < lines.size(); ++i) {
-        const char* line_ptr = lines[i].data();
-
-        // Skip the timestamp
-        while (*line_ptr && *line_ptr != ',') // move past the timestamp
-            line_ptr++;
-        line_ptr++; // move past the comma
-
-        // Parse x
-        double x = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
-        line_ptr++; // move past the comma
-
-        // Parse y
-        double y = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
-        line_ptr++; // move past the comma
-
-        // Parse z
-        double z = std::strtod(line_ptr, const_cast<char**>(&line_ptr));
-
-        // Add x, y, z to the data
-        data.x[i] = x;
-        data.y[i] = y;
-        data.z[i] = z;
-    }
-
-
-    // Clean up
-    delete[] buffer;
-
-    return EXIT_SUCCESS;
-}
-
-
-int load_data_par(const std::string &filename, data &data) {
-    // open the file in binary mode
-    FILE *file = fopen(filename.c_str(), "rb");
-    if (!file) {
-        std::cerr << "Error opening file: " << filename << std::endl;
-        return EXIT_FAILURE;
-    }
-
-    // get file size
-    fseek(file, 0, SEEK_END);
-    size_t fileSize = ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    // read the entire file into a buffer
-    char *buffer = new char[fileSize];
-    fread(buffer, 1, fileSize, file);
+    char *buffer = new char[file_size];
+    fread(buffer, 1, file_size, file);
     fclose(file);
 
     // parse the buffer into lines
     std::vector<std::string_view> lines;
-    size_t startIdx = 0;
-    for (size_t i = 0; i < fileSize; ++i) {
+    size_t start_idx = 0;
+    for (size_t i = 0; i < file_size; ++i) {
         if (buffer[i] == '\n') {
-            lines.emplace_back(buffer + startIdx, i - startIdx);
-            startIdx = i + 1;  // move past the newline character
+            lines.emplace_back(buffer + start_idx, i - start_idx);
+            start_idx = i + 1;  // move past the newline character
         }
     }
 
@@ -120,36 +43,22 @@ int load_data_par(const std::string &filename, data &data) {
     data.z.resize(numLines);
 
 #pragma omp parallel for default(none) shared(lines, data)
-
-//    for (size_t i = 0; i < lines.size(); ++i) {
-//        std::istringstream stream((std::string(lines[i]))); // Convert to std::string to work with istringstream
-//        std::string value1, value2, value3, value4;
-//
-//        if (std::getline(stream, value1, ',') &&
-//            std::getline(stream, value2, ',') &&
-//            std::getline(stream, value3, ',') &&
-//            std::getline(stream, value4, ',')) {
-//            data.x[i] = atof(value2.c_str());
-//            data.y[i] = atof(value3.c_str());
-//            data.z[i] = atof(value4.c_str());
-//        }
-//    }
-
     for (size_t i = 0; i < lines.size(); ++i) {
         char line[256];
-        strncpy(line, lines[i].data(), lines[i].size());
-        line[lines[i].size()] = '\0';
+        strncpy(line, lines[i].data(), lines[i].size()); // copy the line
+        line[lines[i].size()] = '\0'; // null-terminate the string
 
-        char *token = strtok(line, ",");
+        // note: atof way faster than std::stod for this case
+        strtok(line, ","); // skip the timestamp
+        char *token = strtok(nullptr, ",");
+        data.x[i] = atof(token); // parse x
         token = strtok(nullptr, ",");
-        data.x[i] = atof(token);
+        data.y[i] = atof(token); // parse y
         token = strtok(nullptr, ",");
-        data.y[i] = atof(token);
-        token = strtok(nullptr, ",");
-        data.z[i] = atof(token);
+        data.z[i] = atof(token); // parse z
     }
 
-    // Clean up
+    // clean up
     delete[] buffer;
 
     return EXIT_SUCCESS;
