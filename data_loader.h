@@ -7,7 +7,7 @@
 #include <omp.h>
 #include <fstream>
 #include <sstream>
-
+#include <cstring>
 
 /** 1 KB */
 constexpr size_t KB = 1 << 10;

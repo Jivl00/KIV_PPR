@@ -121,18 +121,32 @@ int load_data_par(const std::string &filename, data &data) {
 
 #pragma omp parallel for default(none) shared(lines, data)
 
-    for (size_t i = 0; i < lines.size(); ++i) {
-        std::istringstream stream((std::string(lines[i]))); // Convert to std::string to work with istringstream
-        std::string value1, value2, value3, value4;
+//    for (size_t i = 0; i < lines.size(); ++i) {
+//        std::istringstream stream((std::string(lines[i]))); // Convert to std::string to work with istringstream
+//        std::string value1, value2, value3, value4;
+//
+//        if (std::getline(stream, value1, ',') &&
+//            std::getline(stream, value2, ',') &&
+//            std::getline(stream, value3, ',') &&
+//            std::getline(stream, value4, ',')) {
+//            data.x[i] = atof(value2.c_str());
+//            data.y[i] = atof(value3.c_str());
+//            data.z[i] = atof(value4.c_str());
+//        }
+//    }
 
-        if (std::getline(stream, value1, ',') &&
-            std::getline(stream, value2, ',') &&
-            std::getline(stream, value3, ',') &&
-            std::getline(stream, value4, ',')) {
-            data.x[i] = atof(value2.c_str());
-            data.y[i] = atof(value3.c_str());
-            data.z[i] = atof(value4.c_str());
-        }
+    for (size_t i = 0; i < lines.size(); ++i) {
+        char line[256];
+        strncpy(line, lines[i].data(), lines[i].size());
+        line[lines[i].size()] = '\0';
+
+        char *token = strtok(line, ",");
+        token = strtok(nullptr, ",");
+        data.x[i] = atof(token);
+        token = strtok(nullptr, ",");
+        data.y[i] = atof(token);
+        token = strtok(nullptr, ",");
+        data.z[i] = atof(token);
     }
 
     // Clean up
@@ -140,39 +154,3 @@ int load_data_par(const std::string &filename, data &data) {
 
     return EXIT_SUCCESS;
 }
-
-//int load_data_par(const std::string &filename, data &data) {
-//    std::vector<std::string_view> lines;
-//
-//    // Open the file for reading
-//    std::ifstream file(filename, std::ios::binary);
-//    if (!file.is_open()) {
-//        std::cerr << "File " << filename << " not found!" << std::endl;
-//        return EXIT_FAILURE;
-//    }
-//
-//    // Get the file size
-//    file.seekg(0, std::ios::end);
-//    size_t fileSize = file.tellg();
-//    file.seekg(0, std::ios::beg);
-//
-//    // Read the whole file into a string buffer
-//    std::string fileContent(fileSize, '\0');
-//    file.read(&fileContent[0], fileSize);
-//
-//    // Now, parse the file content into lines
-//    size_t startIdx = 0;
-//    for (size_t i = 0; i < fileSize; ++i) {
-//        if (fileContent[i] == '\n') {
-//            lines.push_back(fileContent.substr(startIdx, i - startIdx));
-//            startIdx = i + 1; // Move past the newline
-//        }
-//    }
-//
-//    // Don't forget the last line if it's not empty
-//    if (startIdx < fileSize) {
-//        lines.push_back(fileContent.substr(startIdx));
-//    }
-//
-//    return EXIT_SUCCESS;
-//}
