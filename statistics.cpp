@@ -1,17 +1,17 @@
 #include "statistics.h"
 #include "merge_sort.h"
 
-int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const std::string &policy) {
+int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const bool policy) {
     double sum = 0;
     double sum2 = 0;
     size_t n = vec.size();
-    auto [sort_time, sort_ret] = measure_time(mergeSort, vec, sum, sum2, "sequential");
+    auto [sort_time, sort_ret] = measure_time(mergeSort, vec, sum, sum2, policy);
 
     if (sort_ret == EXIT_SUCCESS && std::is_sorted(vec.begin(), vec.end())) {
         std::cout << "Sorted in " << sort_time << " seconds" << std::endl;
         cv = CV(sum, sum2, n);
 
-        auto [mad_time, mad_ret] = measure_time(MAD, vec, n, "sequential");
+        auto [mad_time, mad_ret] = measure_time(MAD, vec, n, policy);
 
         mad = mad_ret;
         return EXIT_SUCCESS;
@@ -43,31 +43,28 @@ double find_median(std::vector<double> &arr, size_t n) {
     return n & 1 ? curr : (prev + curr) / 2.0;
 }
 
-void abs_diff(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n) {
-#pragma omp parallel for default(none) shared(arr, abs_diff, median, n)
-    for (size_t i = 0; i < n; i++) {
-        abs_diff[i] = std::abs(arr[i] - median);
-    }
-}
 
-void abs_diff_vec(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n) {
+void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n, const bool policy) {
     size_t i = 0;
 
-    // broadcast median to all elements of the vector
-    __m256d med = _mm256_set1_pd(median);
+    if (policy) {
 
-    // create a mask with the sign bit cleared
-    __m256d sign_mask = _mm256_set1_pd(-0.0);
+        // broadcast median to all elements of the vector
+        __m256d med = _mm256_set1_pd(median);
 
-    size_t step = sizeof(__m256d) / sizeof(double);
+        // create a mask with the sign bit cleared
+        __m256d sign_mask = _mm256_set1_pd(-0.0);
 
-    // process 4 elements at a time using AVX2
+        size_t step = sizeof(__m256d) / sizeof(double);
+
+        // process 4 elements at a time using AVX2
 #pragma omp parallel for default(none) shared(arr, abs_diff, med, n, step, sign_mask) private(i)
-    for (i = 0; i <= n - step; i += step) {
-        __m256d vec = _mm256_loadu_pd(&arr[i]); // load 4 elements
-        __m256d diff = _mm256_sub_pd(vec, med); // subtract median from elements
-        __m256d abs_diff_vec = _mm256_andnot_pd(diff, sign_mask); // clear the sign bit
-        _mm256_storeu_pd(&abs_diff[i], abs_diff_vec); // store result
+        for (i = 0; i <= n - step; i += step) {
+            __m256d vec = _mm256_loadu_pd(&arr[i]); // load 4 elements
+            __m256d diff = _mm256_sub_pd(vec, med); // subtract median from elements
+            __m256d abs_diff_vec = _mm256_andnot_pd(diff, sign_mask); // clear the sign bit
+            _mm256_storeu_pd(&abs_diff[i], abs_diff_vec); // store result
+        }
     }
 
     // process remaining elements
@@ -80,13 +77,12 @@ void abs_diff_vec(std::vector<double> &arr, std::vector<double> &abs_diff, doubl
 
 
 // median absolute deviation
-double MAD(std::vector<double> &arr, size_t n, std::string policy) {
+double MAD(std::vector<double> &arr, size_t n, const bool policy) {
 
     double median = (arr[n / 2] + arr[(n - 1) / 2]) / 2.0;
     // array of absolute differences from the median - size n
     std::vector<double> abs_diff_arr(n);
-//    abs_diff(arr, abs_diff_arr, median, n);
-    abs_diff_vec(arr, abs_diff_arr, median, n);
+    abs_diff_calc(arr, abs_diff_arr, median, n, policy);
 
     return find_median(abs_diff_arr, n);
 }

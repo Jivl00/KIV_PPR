@@ -18,7 +18,7 @@ void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2, const std::
     }
 }
 
-void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r, const std::string &policy) {
+void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r) {
     size_t n1 = m - l + 1; // size of left half
     size_t n2 = r - m; // size of right half
 
@@ -68,14 +68,15 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
                       size_t start, size_t size, double &sum, double &sum2) {
     size_t i, j;
     size_t step = sizeof(__m256d) / sizeof(double);
-    size_t chunk_size = size / omp_get_max_threads();
+    size_t max_threads = omp_get_max_threads();
+    size_t chunk_size = size / max_threads;
     chunk_size = chunk_size - chunk_size % step; // make sure the chunk size is divisible by the vector size
 
-    std::vector<double> local_sums(omp_get_max_threads(), 0);
-    std::vector<double> local_sums2(omp_get_max_threads(), 0);
+    std::vector<double> local_sums(max_threads, 0);
+    std::vector<double> local_sums2(max_threads, 0);
 
-#pragma omp parallel default(none) shared(arr, halve, start, size, local_sums, local_sums2, chunk_size, step) private(i, j)
-    for (i = 0; i < omp_get_max_threads(); i++) {
+#pragma omp parallel default(none) shared(arr, halve, start, size, local_sums, local_sums2, chunk_size, step, max_threads) private(i, j)
+    for (i = 0; i < max_threads; i++) {
         size_t start_chunk = start + i * chunk_size;
         size_t end_chunk = start_chunk + chunk_size;
 
@@ -102,9 +103,8 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
         sum2 += local_sums2[k];
     }
 
-    i = chunk_size * omp_get_max_threads();
     // handle remaining elements
-    for (; i < size; i++) {
+    for (i = chunk_size * max_threads; i < size; i++) {
         double val = arr[start + i];
         halve[i] = val;
         sum += val;
@@ -113,23 +113,26 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 }
 
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, double &sum, double &sum2,
-                     const std::string &policy) {
+                     const bool policy) {
     size_t n1 = m - l + 1;
     size_t n2 = r - m;
 
     std::vector<double> L(n1);
     std::vector<double> R(n2);
 
-    sum_and_copy_vec(arr, L, l, n1, sum, sum2);
-    sum_and_copy_vec(arr, R, m + 1, n2, sum, sum2);
-//    sum_and_copy(arr, L, l, n1, sum, sum2);
-//    sum_and_copy(arr, R, m + 1, n2, sum, sum2);
+    if (policy) {
+        sum_and_copy_vec(arr, L, l, n1, sum, sum2);
+        sum_and_copy_vec(arr, R, m + 1, n2, sum, sum2);
+    } else {
+        sum_and_copy(arr, L, l, n1, sum, sum2);
+        sum_and_copy(arr, R, m + 1, n2, sum, sum2);
+    }
 
     merge(arr, l, n1, n2, L, R);
 }
 
 
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const std::string &policy) {
+int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool policy) {
     size_t n = arr.size();
     size_t curr_size;
     for (curr_size = 1; curr_size <= (n - 1) / 2; curr_size = 2 * curr_size) {
@@ -138,7 +141,7 @@ int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const std::st
         for (left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
             size_t mid = std::min(left_start + curr_size - 1, n - 1);
             size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
-            merge_no_count(arr, left_start, mid, right_end, policy);
+            merge_no_count(arr, left_start, mid, right_end);
         }
     }
     size_t left_start;

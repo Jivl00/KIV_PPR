@@ -17,7 +17,7 @@ const bool vec = true; // vectorized
 int main() {
     // set number of threads - 1 for sequential, max for parallel
     set_num_threads(par);
-
+    std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
 
     // load data from file
     struct data data;
@@ -41,7 +41,7 @@ int main() {
 
         double CV = 0;
         double MAD = 0;
-        auto [stat_time, stat_ret] = measure_time(compute_CV_MAD, data_vec, CV, MAD, "ser_vec");
+        auto [stat_time, stat_ret] = measure_time(compute_CV_MAD, data_vec, CV, MAD, vec);
 
         if (stat_ret == EXIT_SUCCESS) {
             std::cout << "Coefficient of variance: " << CV << std::endl;
