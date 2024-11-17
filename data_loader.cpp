@@ -14,11 +14,10 @@ int load_data_ser(const std::string &filename, data &data) {
     fseek(file, 0, SEEK_SET);
 
     // read the entire file into a buffer
-    char *buffer = new char[fileSize + 1];  // +1 for null-terminator
+    char *buffer = new char[fileSize];
     fread(buffer, 1, fileSize, file);
     fclose(file);
 
-    buffer[fileSize] = '\0';  // Null-terminate the string
 
     // parse the buffer into lines
     std::vector<std::string_view> lines;
@@ -28,11 +27,6 @@ int load_data_ser(const std::string &filename, data &data) {
             lines.emplace_back(buffer + startIdx, i - startIdx);
             startIdx = i + 1;  // move past the newline character
         }
-    }
-
-    // handle the last line (if any)
-    if (startIdx < fileSize) {
-        lines.emplace_back(buffer + startIdx);
     }
 
     // skip the header
@@ -97,11 +91,9 @@ int load_data_par(const std::string &filename, data &data) {
     fseek(file, 0, SEEK_SET);
 
     // read the entire file into a buffer
-    char *buffer = new char[fileSize + 1];  // +1 for null-terminator
+    char *buffer = new char[fileSize];
     fread(buffer, 1, fileSize, file);
     fclose(file);
-
-    buffer[fileSize] = '\0';  // Null-terminate the string
 
     // parse the buffer into lines
     std::vector<std::string_view> lines;
@@ -113,14 +105,8 @@ int load_data_par(const std::string &filename, data &data) {
         }
     }
 
-    // handle the last line (if any)
-    if (startIdx < fileSize) {
-        lines.emplace_back(buffer + startIdx);
-    }
-
     // skip the header
     lines.erase(lines.begin());
-
 
     // clean the data
     data.x.clear();
@@ -132,33 +118,22 @@ int load_data_par(const std::string &filename, data &data) {
     data.x.resize(numLines);
     data.y.resize(numLines);
     data.z.resize(numLines);
-#pragma omp parallel for schedule(static)
+
+#pragma omp parallel for default(none) shared(lines, data)
+
     for (size_t i = 0; i < lines.size(); ++i) {
-        std::string_view line = lines[i];
-        size_t pos = 0;
+        std::istringstream stream((std::string(lines[i]))); // Convert to std::string to work with istringstream
+        std::string value1, value2, value3, value4;
 
-        // Skip the timestamp
-        pos = line.find(',') + 1;
-
-        // Parse x
-        size_t next_pos = line.find(',', pos);
-        double x = std::stod(std::string(line.substr(pos, next_pos - pos)));
-        pos = next_pos + 1;
-
-        // Parse y
-        next_pos = line.find(',', pos);
-        double y = std::stod(std::string(line.substr(pos, next_pos - pos)));
-        pos = next_pos + 1;
-
-        // Parse z
-        double z = std::stod(std::string(line.substr(pos)));
-
-        // Add x, y, z to the data
-        data.x[i] = x;
-        data.y[i] = y;
-        data.z[i] = z;
+        if (std::getline(stream, value1, ',') &&
+            std::getline(stream, value2, ',') &&
+            std::getline(stream, value3, ',') &&
+            std::getline(stream, value4, ',')) {
+            data.x[i] = atof(value2.c_str());
+            data.y[i] = atof(value3.c_str());
+            data.z[i] = atof(value4.c_str());
+        }
     }
-
 
     // Clean up
     delete[] buffer;
