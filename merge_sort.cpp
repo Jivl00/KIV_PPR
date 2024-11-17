@@ -66,30 +66,45 @@ sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr, siz
 
 void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve,
                       size_t start, size_t size, double &sum, double &sum2) {
-    size_t i;
+    size_t i, j;
     size_t step = sizeof(__m256d) / sizeof(double);
+    size_t chunk_size = size / omp_get_max_threads();
+    chunk_size = chunk_size - chunk_size % step; // make sure the chunk size is divisible by the vector size
 
-    __m256d vec_sum = _mm256_setzero_pd();
-    __m256d vec_sum2 = _mm256_setzero_pd();
+    std::vector<double> local_sums(omp_get_max_threads(), 0);
+    std::vector<double> local_sums2(omp_get_max_threads(), 0);
 
-    for (i = 0; i < size - step; i += step) {
-        __m256d vec_vals = _mm256_loadu_pd(&arr[start + i]); // load 4 elements
-        _mm256_storeu_pd(&halve[i], vec_vals); // store 4 elements
-        vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
-        vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+#pragma omp parallel default(none) shared(arr, halve, start, size, local_sums, local_sums2, chunk_size, step) private(i, j)
+    for (i = 0; i < omp_get_max_threads(); i++) {
+        size_t start_chunk = start + i * chunk_size;
+        size_t end_chunk = start_chunk + chunk_size;
 
+        __m256d vec_sum = _mm256_setzero_pd();
+        __m256d vec_sum2 = _mm256_setzero_pd();
+
+        for (j = start_chunk; j < end_chunk; j += step) {
+            __m256d vec_vals = _mm256_loadu_pd(&arr[j]); // load 4 elements
+            _mm256_storeu_pd(&halve[j-start], vec_vals); // store 4 elements
+            vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
+            vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+
+        }
+        // horizontal sum - sum of vector elements
+        for (size_t k = 0; k < step; k++) {
+            local_sums[i] += vec_sum[k];
+            local_sums2[i] += vec_sum2[k];
+        }
     }
 
-    // horizontal sum - sum of vector elements
-    for (size_t j = 0; j < step; j++) {
-        sum += vec_sum[j];
-        sum2 += vec_sum2[j];
+    // sum local sums
+    for (size_t k = 0; k < local_sums.size(); k++) {
+        sum += local_sums[k];
+        sum2 += local_sums2[k];
     }
 
-
-    size_t j = i;
+    i = chunk_size * omp_get_max_threads();
     // handle remaining elements
-    for (i = j; i < size; i++) {
+    for (; i < size; i++) {
         double val = arr[start + i];
         halve[i] = val;
         sum += val;
