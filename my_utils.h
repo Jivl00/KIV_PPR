@@ -4,9 +4,11 @@
 #include <iostream>
 #include <functional>
 #include <tuple>
+#include <omp.h>
 
 /**
  * @brief Measure the time taken by a function to execute
+ * Using variadic templates to accept any function and its arguments
  *
  * @tparam Func Function type
  * @tparam Args Argument types
@@ -22,3 +24,10 @@ auto measure_time(Func f, Args&&... args) {
     std::chrono::duration<double> elapsed = end - start;
     return std::make_pair(elapsed.count(), result);
 }
+
+/**
+ * @brief Set the number of threads for OpenMP
+ *
+ * @param policy Execution policy
+ */
+void set_num_threads(bool parallel);

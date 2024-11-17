@@ -3,6 +3,7 @@
 #include <cmath>
 #include <vector>
 #include <omp.h>
+#include <immintrin.h>
 
 #include "my_utils.h"
 

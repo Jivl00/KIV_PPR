@@ -4,6 +4,7 @@
 #include <cmath>
 #include <iostream>
 #include <omp.h>
+#include <immintrin.h>
 
 /**
  * Standard merge function to merge two halves arr[l..m] and arr[m+1..r]

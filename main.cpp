@@ -10,33 +10,38 @@
 #include "statistics.h"
 
 constexpr std::string DATA_FILE = "ACC_001.csv";
+const bool par = true; // parallel
+const bool vec = true; // vectorized
 
-// Load data from file ACC_001.csv
+
 int main() {
-    // Load data from file
+    // set number of threads - 1 for sequential, max for parallel
+    set_num_threads(par);
+
+
+    // load data from file
     struct data data;
-    auto [load_time, load_ret] = measure_time(load_data_par, DATA_FILE, data);
+    auto [load_time, load_ret] = measure_time(load_data, DATA_FILE, data);
     if (load_ret == EXIT_SUCCESS) {
         std::cout << "Data loaded in " << load_time << " seconds" << std::endl;
     } else {
         std::cerr << "Failed to load data" << std::endl;
     }
 
-    // Sort data and calculate statistics for each column - x, y, z
-    for (const auto &[name, vec]: std::map<std::string, std::reference_wrapper<std::vector<double>>>{
+    for (const auto &[name, data_vec]: std::map<std::string, std::reference_wrapper<std::vector<double>>>{
             {"x", data.x},
             {"y", data.y},
             {"z", data.z}}) {
         std::cout << "\nColumn " << name << " :" << std::endl;
 
-        size_t n = vec.get().size();
+        size_t n = data_vec.get().size();
 
         std::cout << n << " elements" << std::endl;
         std::cout << "=============================" << std::endl;
 
         double CV = 0;
         double MAD = 0;
-        auto [stat_time, stat_ret] = measure_time(compute_CV_MAD, vec, CV, MAD, "par_vec");
+        auto [stat_time, stat_ret] = measure_time(compute_CV_MAD, data_vec, CV, MAD, "ser_vec");
 
         if (stat_ret == EXIT_SUCCESS) {
             std::cout << "Coefficient of variance: " << CV << std::endl;
