@@ -1,4 +1,3 @@
-#include <sstream>
 #include "data_loader.h"
 
 int load_data(const std::string &filename, data &data) {
@@ -18,6 +17,8 @@ int load_data(const std::string &filename, data &data) {
     // read the entire file into a buffer
     char *buffer = new char[file_size];
     fread(buffer, 1, file_size, file);
+
+    // close the file
     fclose(file);
 
     // parse the buffer into lines
