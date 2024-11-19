@@ -17,4 +17,5 @@ add_executable(SP
         my_utils.cpp
         my_utils.h
         statistics.cpp
-        statistics.h)
+        statistics.h
+)

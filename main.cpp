@@ -21,7 +21,11 @@ int main() {
 
     // load data from file
     struct data data;
-    auto [load_time, load_ret] = measure_time(load_data, DATA_FILE, data);
+    ExecutionPolicy policy(par ? ExecutionPolicy::Type::Parallel : ExecutionPolicy::Type::Sequential);
+    auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const ExecutionPolicy& policy) {
+        return load_data(filename, data, policy);
+    }, DATA_FILE, data, std::cref(policy));
+
     if (load_ret == EXIT_SUCCESS) {
         std::cout << "Data loaded in " << load_time << " seconds" << std::endl;
     } else {

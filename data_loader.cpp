@@ -1,6 +1,6 @@
 #include "data_loader.h"
 
-int load_data(const std::string &filename, data &data) {
+int load_data(const std::string &filename, data &data, const ExecutionPolicy &policy) {
     // open the file in binary mode
     FILE* file = nullptr;
     errno_t err = fopen_s(&file, filename.c_str(), "rb");
@@ -17,7 +17,6 @@ int load_data(const std::string &filename, data &data) {
     // read the entire file into a buffer
     char *buffer = new char[file_size];
     fread(buffer, 1, file_size, file);
-
     // close the file
     fclose(file);
 
@@ -44,8 +43,8 @@ int load_data(const std::string &filename, data &data) {
     data.x.resize(numLines);
     data.y.resize(numLines);
     data.z.resize(numLines);
-
-    std::for_each(std::execution::par, lines.begin(), lines.end(), [&](const std::string_view& line) {
+    std::visit([&](auto&& exec_policy) {
+    std::for_each(exec_policy, lines.begin(), lines.end(), [&](const std::string_view& line) {
         auto i =static_cast <size_t> (&line - &lines[0]);  // get the index of the line
 
         char line_cstr[256];
@@ -67,6 +66,7 @@ int load_data(const std::string &filename, data &data) {
         token = strtok_s(nullptr, ",", &saveptr);
         data.z[i] = std::strtod(token, nullptr); // parse z
     });
+    }, policy.get_policy());
 
     // clean up
     delete[] buffer;
