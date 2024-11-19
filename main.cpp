@@ -9,9 +9,9 @@
 #include "merge_sort.h"
 #include "statistics.h"
 
-constexpr std::string DATA_FILE = "ACC_001.csv";
+const std::string DATA_FILE = "ACC_001.csv";
 const bool par = true; // parallel
-const bool vec = true; // vectorized
+const bool vec = false; // vectorized
 
 
 int main() {

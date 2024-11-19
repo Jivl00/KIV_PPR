@@ -46,7 +46,6 @@ double find_median(std::vector<double> &arr, size_t n) {
 
 void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n, const bool policy) {
     size_t i = 0;
-
     if (policy) {
 
         // broadcast median to all elements of the vector
@@ -57,22 +56,25 @@ void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, doub
 
         size_t step = sizeof(__m256d) / sizeof(double);
 
-        // process 4 elements at a time using AVX2
-#pragma omp parallel for default(none) shared(arr, abs_diff, med, n, step, sign_mask) private(i)
+        std::vector<size_t> indices;
         for (i = 0; i <= n - step; i += step) {
+            indices.push_back(i);
+        }
+
+        // process 4 elements at a time using AVX2
+        std::for_each(std::execution::par, indices.begin(), indices.end(), [&](size_t i) {
             __m256d vec = _mm256_loadu_pd(&arr[i]); // load 4 elements
             __m256d diff = _mm256_sub_pd(vec, med); // subtract median from elements
-            __m256d abs_diff_vec = _mm256_andnot_pd(diff, sign_mask); // clear the sign bit
+            __m256d abs_diff_vec = _mm256_andnot_pd(sign_mask, diff); // clear the sign bit
             _mm256_storeu_pd(&abs_diff[i], abs_diff_vec); // store result
-        }
+        });
     }
 
     // process remaining elements
-    size_t j = i;
-#pragma omp parallel for default(none) shared(arr, abs_diff, median, n, j) private(i)
-    for (i = j; i < n; ++i) {
-        abs_diff[i] = std::abs(arr[i] - median);
-    }
+    int j = static_cast<int>(i);
+    std::for_each(std::execution::par, arr.begin() + j, arr.begin() + static_cast<int>(n), [&](double &value) {
+        abs_diff[&value - &arr[0]] = std::abs(value - median);
+    });
 }
 
 

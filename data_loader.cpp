@@ -1,16 +1,18 @@
+#include <sstream>
 #include "data_loader.h"
 
 int load_data(const std::string &filename, data &data) {
     // open the file in binary mode
-    FILE *file = fopen(filename.c_str(), "rb");
-    if (!file) {
+    FILE* file = nullptr;
+    errno_t err = fopen_s(&file, filename.c_str(), "rb");
+    if (err != 0) {
         std::cerr << "Error opening file: " << filename << std::endl;
         return EXIT_FAILURE;
     }
 
     // get file size
     fseek(file, 0, SEEK_END);
-    size_t file_size = ftell(file);
+    const auto file_size = static_cast<size_t>(ftell(file));
     fseek(file, 0, SEEK_SET);
 
     // read the entire file into a buffer
@@ -42,21 +44,28 @@ int load_data(const std::string &filename, data &data) {
     data.y.resize(numLines);
     data.z.resize(numLines);
 
-#pragma omp parallel for default(none) shared(lines, data)
-    for (size_t i = 0; i < lines.size(); ++i) {
-        char line[256];
-        strncpy(line, lines[i].data(), lines[i].size()); // copy the line
-        line[lines[i].size()] = '\0'; // null-terminate the string
+    std::for_each(std::execution::par, lines.begin(), lines.end(), [&](const std::string_view& line) {
+        auto i =static_cast <size_t> (&line - &lines[0]);  // get the index of the line
 
-        // note: atof way faster than std::stod for this case
-        strtok(line, ","); // skip the timestamp
-        char *token = strtok(nullptr, ",");
-        data.x[i] = atof(token); // parse x
-        token = strtok(nullptr, ",");
-        data.y[i] = atof(token); // parse y
-        token = strtok(nullptr, ",");
-        data.z[i] = atof(token); // parse z
-    }
+        char line_cstr[256];
+//        strncpy(line_cstr, line.data(), line.size());
+        strncpy_s(line_cstr, sizeof(line_cstr), line.data(), line.size());  // copy the line
+        line_cstr[sizeof(line_cstr) - 1] = '\0';
+
+        char* saveptr = nullptr;
+
+        strtok_s(line_cstr, ",", &saveptr); // skip the timestamp
+
+        // Parse x, y, z
+        char* token = strtok_s(nullptr, ",", &saveptr);
+        data.x[i] = std::strtod(token, nullptr); // parse x
+
+        token = strtok_s(nullptr, ",", &saveptr);
+        data.y[i] = std::strtod(token, nullptr); // parse y
+
+        token = strtok_s(nullptr, ",", &saveptr);
+        data.z[i] = std::strtod(token, nullptr); // parse z
+    });
 
     // clean up
     delete[] buffer;

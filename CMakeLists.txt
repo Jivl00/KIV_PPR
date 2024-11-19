@@ -1,8 +1,10 @@
-cmake_minimum_required(VERSION 3.26)
+add_definitions(-D__STDC_WANT_SECURE_LIB__=1)
+
+cmake_minimum_required(VERSION 3.21)
 project(SP)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -fopenmp -Wall")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall /openmp /arch:AVX2")
 
 include_directories(.)
 

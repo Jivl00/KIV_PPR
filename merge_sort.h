@@ -4,6 +4,8 @@
 #include <cmath>
 #include <iostream>
 #include <omp.h>
+#include <algorithm>
+#include <execution>
 #include <immintrin.h>
 
 /**

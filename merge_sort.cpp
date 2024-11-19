@@ -36,7 +36,7 @@ void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r) {
 void
 sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr, size_t start, size_t size, double &sum,
              double &sum2) {
-    size_t i;
+    int i;
 
     std::vector<double> local_sums(omp_get_max_threads(), 0);
     std::vector<double> local_sums2(omp_get_max_threads(), 0);
@@ -91,9 +91,13 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 
         }
         // horizontal sum - sum of vector elements
+        std::vector<double> temp_sum(step);
+        std::vector<double> temp_sum2(step);
+        _mm256_storeu_pd(temp_sum.data(), vec_sum);
+        _mm256_storeu_pd(temp_sum2.data(), vec_sum2);
         for (size_t k = 0; k < step; k++) {
-            local_sums[i] += vec_sum[k];
-            local_sums2[i] += vec_sum2[k];
+            local_sums[i] += temp_sum[k];
+            local_sums2[i] += temp_sum2[k];
         }
     }
 
@@ -136,21 +140,26 @@ int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool po
     size_t n = arr.size();
     size_t curr_size;
     for (curr_size = 1; curr_size <= (n - 1) / 2; curr_size = 2 * curr_size) {
-        size_t left_start;
-#pragma omp parallel for default(none) shared(arr, n, curr_size, policy) private(left_start)
-        for (left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
+        std::vector<size_t> left_starts;
+        for (size_t left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
+            left_starts.push_back(left_start);
+        }
+        std::for_each(std::execution::par, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
             size_t mid = std::min(left_start + curr_size - 1, n - 1);
             size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
             merge_no_count(arr, left_start, mid, right_end);
-        }
+        });
     }
-    size_t left_start;
-#pragma omp parallel for default(none) shared(arr, n, curr_size, sum, sum2, policy) private(left_start)
-    for (left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
+
+    std::vector<size_t> left_starts;
+    for (size_t left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
+        left_starts.push_back(left_start);
+    }
+    std::for_each(std::execution::par, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
         size_t mid = std::min(left_start + curr_size - 1, n - 1);
         size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
         merge_and_count(arr, left_start, mid, right_end, sum, sum2, policy);
-    }
+    });
     return EXIT_SUCCESS;
 }
 

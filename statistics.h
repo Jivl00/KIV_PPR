@@ -3,6 +3,8 @@
 #include <cmath>
 #include <vector>
 #include <omp.h>
+#include <algorithm>
+#include <execution>
 #include <immintrin.h>
 
 #include "my_utils.h"

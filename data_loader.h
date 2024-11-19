@@ -2,8 +2,8 @@
 
 #include <iostream>
 #include <vector>
-#include <omp.h>
-#include <cstring>
+#include <algorithm>
+#include <execution>
 
 /** Data structure to store accelerometer data */
 struct data {
