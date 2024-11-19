@@ -1,12 +1,10 @@
 #include <chrono>
 #include <iostream>
 #include <map>
-
 #include <execution>
 
 #include "my_utils.h"
 #include "data_loader.h"
-#include "merge_sort.h"
 #include "statistics.h"
 
 const std::string DATA_FILE = "ACC_001.csv";
@@ -15,13 +13,13 @@ const bool vec = false; // vectorized
 
 
 int main() {
-    // set number of threads - 1 for sequential, max for parallel
+    // set execution policy - parallel or sequential
+    ExecutionPolicy policy(par ? ExecutionPolicy::Type::Parallel : ExecutionPolicy::Type::Sequential);
     set_num_threads(par);
     std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
 
     // load data from file
     struct data data;
-    ExecutionPolicy policy(par ? ExecutionPolicy::Type::Parallel : ExecutionPolicy::Type::Sequential);
     auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const ExecutionPolicy& policy) {
         return load_data(filename, data, policy);
     }, DATA_FILE, data, std::cref(policy));
@@ -45,7 +43,9 @@ int main() {
 
         double CV = 0;
         double MAD = 0;
-        auto [stat_time, stat_ret] = measure_time(compute_CV_MAD, data_vec, CV, MAD, vec);
+        auto [stat_time, stat_ret] = measure_time([&](std::vector<double> &vec, double &cv, double &mad, bool is_vectorized, const ExecutionPolicy &policy) {
+            return compute_CV_MAD(vec, cv, mad, is_vectorized, policy);
+        }, data_vec, CV, MAD, vec, std::cref(policy));
 
         if (stat_ret == EXIT_SUCCESS) {
             std::cout << "Coefficient of variance: " << CV << std::endl;
@@ -54,7 +54,6 @@ int main() {
         } else {
             std::cerr << "Failed to compute statistics" << std::endl;
         }
-
     }
 
     return 0;

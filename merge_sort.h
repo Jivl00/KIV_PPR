@@ -8,47 +8,50 @@
 #include <execution>
 #include <immintrin.h>
 
+#include "my_utils.h"
+
 /**
- * Standard merge function to merge two halves arr[l..m] and arr[m+1..r]
- * @param arr - vector to merge
- * @param l - left index
+ * @brief Standard merge function to merge two halves arr[l..m] and arr[m+1..r] - both halves are sorted
+ * @param arr - vector to merge the halves to (output)
+ * @param l - index to the arr where to store the merged halves
  * @param n1 - size of left half
  * @param n2 - size of right half
- * @param L - left half
- * @param R - right half
+ * @param L - left half (size n1) - ascending order
+ * @param R - right half (size n2) - ascending order
  */
 void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2,
            const std::vector<double> &L, const std::vector<double> &R);
 
 /**
- * Standard merge function to merge two halves arr[l..m] and arr[m+1..r] without counting aditional statistics
+ * @brief Merges two halves arr[l..m] and arr[m+1..r] of the array
  * @param arr - vector to merge
- * @param l - left index
- * @param m - middle index
- * @param r - right index
- * @param policy - execution policy
+ * @param l - start index of the left half
+ * @param m - middle index - end index of the left half and start index of the right half
+ * @param r - end index of the right half
  */
 void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r);
 
 /**
- * Merge and count function for the last iteration of merge sort algorithm - counts sum and sum of squared elements
+ * @brief Merges two halves arr[l..m] and arr[m+1..r] of the array and counts the sum and sum of squared elements
  * @param arr - vector to merge
- * @param l - left index
- * @param m - middle index
- * @param r - right index
- * @param sum - sum of elements
- * @param sum2 - sum of squared elements
- * @param policy - execution policy
+ * @param l - start index of the left half
+ * @param m - middle index - end index of the left half and start index of the right half
+ * @param r - end index of the right half
+ * @param sum - sum of elements (output)
+ * @param sum2 - sum of squared elements (output)
+ * @param is_vectorized - flag to indicate if vectorization is enabled
+ * @param policy - execution policy - parallel or sequential
  */
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r,
-                     double &sum, double &sum2, bool policy);
+                     double &sum, double &sum2, bool is_vectorized, const ExecutionPolicy &policy);
 
 /**
- * Merge sort algorithm
+ * @brief Merge sort algorithm to sort the vector and calculate sum and sum of squared elements
  * @param arr - vector to sort
- * @param sum - sum of elements
- * @param sum2 - sum of squared elements
- * @param policy - execution policy
- * @return 0 if successful, 1 otherwise
+ * @param sum - sum of elements (output)
+ * @param sum2 - sum of squared elements (output)
+ * @param is_vectorized - flag to indicate if vectorization is enabled
+ * @param policy - execution policy - parallel or sequential
+ * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
  */
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, bool policy);
+int mergeSort(std::vector<double> &arr, double &sum, double &sum2, bool is_vectorized, const ExecutionPolicy &policy);

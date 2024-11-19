@@ -13,7 +13,8 @@ struct data {
     std::vector<double> z;
 };
 
-/** Load accelerometer data from a file
+/**
+ * @brief Load accelerometer data from a file
  * @param filename File to load data from
  * @param data Data structure to store the loaded data
  * @param policy Execution policy

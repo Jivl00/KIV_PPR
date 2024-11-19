@@ -85,7 +85,7 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 
         for (j = start_chunk; j < end_chunk; j += step) {
             __m256d vec_vals = _mm256_loadu_pd(&arr[j]); // load 4 elements
-            _mm256_storeu_pd(&halve[j-start], vec_vals); // store 4 elements
+            _mm256_storeu_pd(&halve[j - start], vec_vals); // store 4 elements
             vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
             vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
 
@@ -117,14 +117,14 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 }
 
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, double &sum, double &sum2,
-                     const bool policy) {
+                     const bool is_vectorized, const ExecutionPolicy &policy) {
     size_t n1 = m - l + 1;
     size_t n2 = r - m;
 
     std::vector<double> L(n1);
     std::vector<double> R(n2);
 
-    if (policy) {
+    if (is_vectorized) {
         sum_and_copy_vec(arr, L, l, n1, sum, sum2);
         sum_and_copy_vec(arr, R, m + 1, n2, sum, sum2);
     } else {
@@ -136,30 +136,41 @@ void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, dou
 }
 
 
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool policy) {
+int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool is_vectorized,
+              const ExecutionPolicy &policy) {
     size_t n = arr.size();
     size_t curr_size;
+    // divide the array into halves of size 1, 2, 4, 8, ... until the size is less than half the array size
     for (curr_size = 1; curr_size <= (n - 1) / 2; curr_size = 2 * curr_size) {
+        // indices pre-calculation
         std::vector<size_t> left_starts;
         for (size_t left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
             left_starts.push_back(left_start);
         }
-        std::for_each(std::execution::par, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
-            size_t mid = std::min(left_start + curr_size - 1, n - 1);
-            size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
-            merge_no_count(arr, left_start, mid, right_end);
-        });
+        // merge the halves
+        std::visit([&](auto &&exec_policy) {
+            std::for_each(exec_policy, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
+                size_t mid = std::min(left_start + curr_size - 1, n - 1);
+                size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
+                merge_no_count(arr, left_start, mid, right_end);
+            });
+        }, policy.get_policy());
     }
-
+    // last iteration - merge and count the sum and sum of squares
+    // indices pre-calculation
     std::vector<size_t> left_starts;
     for (size_t left_start = 0; left_start < n - 1; left_start += 2 * curr_size) {
         left_starts.push_back(left_start);
     }
-    std::for_each(std::execution::par, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
-        size_t mid = std::min(left_start + curr_size - 1, n - 1);
-        size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
-        merge_and_count(arr, left_start, mid, right_end, sum, sum2, policy);
-    });
+    // merge the halves and count the sum and sum of squares
+    std::visit([&](auto &&exec_policy) {
+        std::for_each(exec_policy, left_starts.begin(), left_starts.end(), [&](size_t left_start) {
+            size_t mid = std::min(left_start + curr_size - 1, n - 1);
+            size_t right_end = std::min(left_start + 2 * curr_size - 1, n - 1);
+            merge_and_count(arr, left_start, mid, right_end, sum, sum2, is_vectorized, policy);
+        });
+    }, policy.get_policy());
+
     return EXIT_SUCCESS;
 }
 
