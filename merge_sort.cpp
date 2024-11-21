@@ -32,36 +32,37 @@ void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r) {
     merge(arr, l, n1, n2, L, R);
 }
 
+void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr,
+                  size_t start, size_t size, double &sum, double &sum2) {
 
-void
-sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr, size_t start, size_t size, double &sum,
-             double &sum2) {
-    int i;
+    size_t max_num_threads = std::thread::hardware_concurrency();
+    size_t chunk_size = size / max_num_threads;
 
-    std::vector<double> local_sums(omp_get_max_threads(), 0);
-    std::vector<double> local_sums2(omp_get_max_threads(), 0);
+    // local sums and sum of squares for each thread
+    std::vector<double> local_sums(max_num_threads, 0.0);
+    std::vector<double> local_sums2(max_num_threads, 0.0);
 
-#pragma omp parallel default(none) shared(arr, halve_arr, start, size, local_sums, local_sums2) private(i)
-    {
-        int thread_id = omp_get_thread_num();
-        double local_sum = 0;
-        double local_sum2 = 0;
+    std::vector<size_t> chunk_indices(max_num_threads);
+    std::iota(chunk_indices.begin(), chunk_indices.end(), 0); // pre-calculate chunk indices
 
-#pragma omp for schedule(static)
-        for (i = 0; i < size; i++) {
-            double temp_val = arr[start + i];
-            local_sum2 += temp_val * temp_val;
-            local_sum += temp_val;
-            halve_arr[i] = temp_val;
-        }
-        local_sums[thread_id] = local_sum;
-        local_sums2[thread_id] = local_sum2;
-    }
+    std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(),
+                  [&](const auto &chunk_id) {
+                      size_t start_chunk = chunk_id * chunk_size;
+                      size_t end_chunk = (chunk_id == max_num_threads - 1) ? size : start_chunk + chunk_size;
 
-    for (i = 0; i < local_sums.size(); i++) {
-        sum += local_sums[i];
-        sum2 += local_sums2[i];
-    }
+                      for (size_t i = start_chunk; i < end_chunk; i++) {
+                          double val = arr[i + start];  // get value from original array
+                          halve_arr[i] = val;  // copy value to halve array
+
+                          // accumulate sum and sum of squares for this chunk
+                          local_sums[chunk_id] += val;
+                          local_sums2[chunk_id] += val * val;
+                      }
+                  });
+
+    // combine results from all threads - reduction of local sums
+    sum += std::accumulate(local_sums.begin(), local_sums.end(), 0.0);
+    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
 }
 
 void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve,
