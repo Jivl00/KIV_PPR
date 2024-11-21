@@ -65,56 +65,113 @@ void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr
     sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
 }
 
-void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve,
+//void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve,
+//                      size_t start, size_t size, double &sum, double &sum2) {
+//    size_t i, j;
+//    size_t step = sizeof(__m256d) / sizeof(double);
+//    size_t max_threads = omp_get_max_threads();
+//    size_t chunk_size = size / max_threads;
+//    chunk_size = chunk_size - chunk_size % step; // make sure the chunk size is divisible by the vector size
+//
+//    std::vector<double> local_sums(max_threads, 0);
+//    std::vector<double> local_sums2(max_threads, 0);
+//
+//#pragma omp parallel default(none) shared(arr, halve, start, size, local_sums, local_sums2, chunk_size, step, max_threads) private(i, j)
+//    for (i = 0; i < max_threads; i++) {
+//        size_t start_chunk = start + i * chunk_size;
+//        size_t end_chunk = start_chunk + chunk_size;
+//
+//        __m256d vec_sum = _mm256_setzero_pd();
+//        __m256d vec_sum2 = _mm256_setzero_pd();
+//
+//        for (j = start_chunk; j < end_chunk; j += step) {
+//            __m256d vec_vals = _mm256_loadu_pd(&arr[j]); // load 4 elements
+//            _mm256_storeu_pd(&halve[j - start], vec_vals); // store 4 elements
+//            vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
+//            vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+//
+//        }
+//        // horizontal sum - sum of vector elements
+//        std::vector<double> temp_sum(step);
+//        std::vector<double> temp_sum2(step);
+//        _mm256_storeu_pd(temp_sum.data(), vec_sum);
+//        _mm256_storeu_pd(temp_sum2.data(), vec_sum2);
+//        for (size_t k = 0; k < step; k++) {
+//            local_sums[i] += temp_sum[k];
+//            local_sums2[i] += temp_sum2[k];
+//        }
+//    }
+//
+//    // sum local sums
+//    for (size_t k = 0; k < local_sums.size(); k++) {
+//        sum += local_sums[k];
+//        sum2 += local_sums2[k];
+//    }
+//
+//    // handle remaining elements
+//    for (i = chunk_size * max_threads; i < size; i++) {
+//        double val = arr[start + i];
+//        halve[i] = val;
+//        sum += val;
+//        sum2 += val * val;
+//    }
+//}
+
+void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve_arr,
                       size_t start, size_t size, double &sum, double &sum2) {
-    size_t i, j;
+
+    size_t max_num_threads = std::thread::hardware_concurrency();
+    size_t chunk_size = size / max_num_threads;
     size_t step = sizeof(__m256d) / sizeof(double);
-    size_t max_threads = omp_get_max_threads();
-    size_t chunk_size = size / max_threads;
-    chunk_size = chunk_size - chunk_size % step; // make sure the chunk size is divisible by the vector size
 
-    std::vector<double> local_sums(max_threads, 0);
-    std::vector<double> local_sums2(max_threads, 0);
+    // Local sums and sum of squares for each thread
+    std::vector<double> local_sums(max_num_threads, 0.0);
+    std::vector<double> local_sums2(max_num_threads, 0.0);
 
-#pragma omp parallel default(none) shared(arr, halve, start, size, local_sums, local_sums2, chunk_size, step, max_threads) private(i, j)
-    for (i = 0; i < max_threads; i++) {
-        size_t start_chunk = start + i * chunk_size;
-        size_t end_chunk = start_chunk + chunk_size;
+    // Vector to hold the chunk indices for each thread
+    std::vector<size_t> chunk_indices(max_num_threads);
+    std::iota(chunk_indices.begin(), chunk_indices.end(), 0); // Pre-calculate chunk indices
 
-        __m256d vec_sum = _mm256_setzero_pd();
-        __m256d vec_sum2 = _mm256_setzero_pd();
+    std::for_each(std::execution::par, chunk_indices.begin(), chunk_indices.end(),
+                  [&](const auto &chunk_id) {
+                      size_t start_chunk = chunk_id * chunk_size;
+                      size_t end_chunk = (chunk_id == max_num_threads - 1) ? size : start_chunk + chunk_size;
 
-        for (j = start_chunk; j < end_chunk; j += step) {
-            __m256d vec_vals = _mm256_loadu_pd(&arr[j]); // load 4 elements
-            _mm256_storeu_pd(&halve[j - start], vec_vals); // store 4 elements
-            vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
-            vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+                      __m256d vec_sum = _mm256_setzero_pd();
+                      __m256d vec_sum2 = _mm256_setzero_pd();
 
-        }
-        // horizontal sum - sum of vector elements
-        std::vector<double> temp_sum(step);
-        std::vector<double> temp_sum2(step);
-        _mm256_storeu_pd(temp_sum.data(), vec_sum);
-        _mm256_storeu_pd(temp_sum2.data(), vec_sum2);
-        for (size_t k = 0; k < step; k++) {
-            local_sums[i] += temp_sum[k];
-            local_sums2[i] += temp_sum2[k];
-        }
-    }
+                      // Process elements in chunks of 4 using AVX2
+                      for (size_t i = start_chunk; i < end_chunk; i += step) {
+                          __m256d vec_vals = _mm256_loadu_pd(&arr[i + start]); // load 4 elements
+                          _mm256_storeu_pd(&halve_arr[i], vec_vals); // store 4 elements
+                          vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
+                          vec_sum2 = _mm256_add_pd(vec_sum2, _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+                      }
 
-    // sum local sums
-    for (size_t k = 0; k < local_sums.size(); k++) {
-        sum += local_sums[k];
-        sum2 += local_sums2[k];
-    }
+                      // Horizontal sum - sum of vector elements
+                      std::vector<double> temp_sum(step, 0.0);
+                      std::vector<double> temp_sum2(step, 0.0);
+                      _mm256_storeu_pd(temp_sum.data(), vec_sum);
+                      _mm256_storeu_pd(temp_sum2.data(), vec_sum2);
+                      for (size_t k = 0; k < step; k++) {
+                          local_sums[chunk_id] += temp_sum[k];
+                          local_sums2[chunk_id] += temp_sum2[k];
+                      }
 
-    // handle remaining elements
-    for (i = chunk_size * max_threads; i < size; i++) {
-        double val = arr[start + i];
-        halve[i] = val;
-        sum += val;
-        sum2 += val * val;
-    }
+                      // Handle any remaining elements (less than 4) in the tail
+                      for (size_t i = end_chunk - (end_chunk % step); i < end_chunk; i++) {
+                          double val = arr[i + start];  // Get value from original array
+                          halve_arr[i] = val;  // Copy value to halve array
+
+                          // Accumulate sum and sum of squares for this chunk
+                          local_sums[chunk_id] += val;
+                          local_sums2[chunk_id] += val * val;
+                      }
+                  });
+
+    // Combine results from all threads - reduction of local sums
+    sum += std::accumulate(local_sums.begin(), local_sums.end(), 0.0);
+    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
 }
 
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, double &sum, double &sum2,
