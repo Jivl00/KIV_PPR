@@ -110,3 +110,32 @@ void GPU_computations::sum_vector(std::vector<double> &arr, double &sum, double 
 }
 
 
+void GPU_computations::sort_vector(std::vector<double> &arr, size_t n) {
+    size_t padded_size = 1 << static_cast<size_t>(ceil(log2(n)));
+    std::vector<double> padded_arr(padded_size, std::numeric_limits<double>::infinity());
+    std::copy(arr.begin(), arr.end(), padded_arr.begin());
+
+    // Temporary buffer for merging
+    std::vector<double> temp(padded_size);
+
+    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * padded_size, padded_arr.data());
+    cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * padded_size, temp.data());
+
+    cl::Kernel kernel_merge_sort(program, "merge_sort");
+
+    for (size_t width = 1; width < padded_size; width *= 2) {
+        kernel_merge_sort.setArg(0, buffer_arr);
+        kernel_merge_sort.setArg(1, buffer_temp);
+        kernel_merge_sort.setArg(2, static_cast<unsigned int>(width));
+        kernel_merge_sort.setArg(3, static_cast<unsigned int>(padded_size));
+
+        cl::NDRange global(padded_size / (width * 2));
+        queue.enqueueNDRangeKernel(kernel_merge_sort, cl::NullRange, global);
+        queue.finish();
+    }
+
+    // Read the sorted array
+    queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(double) * n, arr.data());
+}
+
+

@@ -54,12 +54,51 @@ int main() {
                 partialSumsSquares[group_id] = localSumsSquares[0];
             }
         }
+
+__kernel void merge_sort(__global double *arr, __global double *temp, const unsigned int width, const unsigned int size) {
+    int global_id = get_global_id(0);
+    int start = global_id * width * 2; // Starting index for this merge
+    int mid = start + width;          // Middle index
+    int end = min(start + 2 * width, size); // End index (clamped to size)
+
+    if (mid >= size) {
+        return; // Nothing to merge
+    }
+
+    int left = start;
+    int right = mid;
+    int index = start;
+
+    // Merge two halves into the temp array
+    while (left < mid && right < end) {
+        if (arr[left] <= arr[right]) {
+            temp[index++] = arr[left++];
+        } else {
+            temp[index++] = arr[right++];
+        }
+    }
+
+    // Copy remaining elements from the left half
+    while (left < mid) {
+        temp[index++] = arr[left++];
+    }
+
+    // Copy remaining elements from the right half
+    while (right < end) {
+        temp[index++] = arr[right++];
+    }
+
+    // Copy sorted data back to the original array
+    for (int i = start; i < end; i++) {
+        arr[i] = temp[i];
+    }
+}
 )";
 
 
     GPU_computations gpu_computations{kernelSource};
 
-    std::vector<double> vec = {8, 6, 9, 5, -99, -6, 3, 44, 5, 2, 8, 888, -1, -22,55555};
+    std::vector<double> vec = {8, 6, 9, 5, -99, -6, 3, 44, 5, 2, 8, 888, -1, -22, 55555};
 //    std::vector<double> vec(20000000, 2.0);
 //    std::iota(vec.begin(), vec.end(), 1);
     std::vector<double> abs_diff(vec.size());
@@ -82,6 +121,23 @@ int main() {
 
     std::cout << "check sum: " << std::accumulate(vec.begin(), vec.end(), 0.0) << std::endl;
     std::cout << "check sum of squares: " << std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0) << std::endl;
+
+    // sort the vector
+    vec = {8, 6, 9, 5, -99, -6, 3, 44, 5, 2, 8, 888, -1, -22, 55555};
+    gpu_computations.sort_vector(vec, vec.size());
+
+    std::cout << "Sorted Vector: ";
+    for (const auto &val: vec) {
+        std::cout << val << " ";
+    }
+
+    std::cout << std::endl;
+    vec = {8, 6, 9, 5, -99, -6, 3, 44, 5, 2, 8, 888, -1, -22, 55555};
+    std::sort(vec.begin(), vec.end());
+    std::cout << "Check sorted: ";
+    for (const auto &val: vec) {
+        std::cout << val << " ";
+    }
 
 
     return 0;
