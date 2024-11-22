@@ -31,6 +31,8 @@ add_executable(SP
         src/openCL_utils.cpp
         src/openCL_utils.h
         src/openCL_utils.h
+        src/statistics/gpu/GPU_computations.cpp
+        src/statistics/gpu/GPU_computations.h
 )
 
 target_link_libraries(SP OpenCL::OpenCL)

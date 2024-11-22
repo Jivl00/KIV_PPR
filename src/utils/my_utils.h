@@ -6,7 +6,6 @@
 #include <tuple>
 #include <variant>
 #include <execution>
-#include <omp.h>
 #include <map>
 
 /**
@@ -59,10 +58,3 @@ public:
 private:
     Type type_;
 };
-
-/**
- * @brief Set the number of threads for OpenMP
- *
- * @param policy Execution policy
- */
-void set_num_threads(bool parallel);

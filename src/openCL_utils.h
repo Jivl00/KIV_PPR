@@ -3,9 +3,7 @@
 #include <CL/cl.hpp>
 #include <vector>
 
-#ifdef _MSC_VER
-#pragma comment(lib, "opencl.lib")
-#endif
+
 
 /**
  * @brief Setup OpenCL context, command queue and program
