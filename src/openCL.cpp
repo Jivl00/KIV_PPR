@@ -17,7 +17,9 @@ int main() {
         __kernel void vector_sums(
             __global const double* input,
             __global double* partialSums,
-            __local double* localSums) {
+            __global double* partialSumsSquares,
+            __local double* localSums,
+            __local double* localSumsSquares) {
 
             uint global_id = get_global_id(0);
             uint local_id = get_local_id(0);
@@ -26,9 +28,12 @@ int main() {
 
             // Initialize local memory
             if (global_id < get_global_size(0)) {
-                localSums[local_id] = input[global_id];
+                double value = input[global_id];
+                localSums[local_id] = value;
+                localSumsSquares[local_id] = value * value;
             } else {
                 localSums[local_id] = 0.0; // Handle out-of-bound threads
+                localSumsSquares[local_id] = 0.0;
             }
 
             // Synchronize to ensure all work-items have written to local memory
@@ -38,13 +43,15 @@ int main() {
             for (uint stride = group_size / 2; stride > 0; stride /= 2) {
                 if (local_id < stride) {
                     localSums[local_id] += localSums[local_id + stride];
+                    localSumsSquares[local_id] += localSumsSquares[local_id + stride];
                 }
                 barrier(CLK_LOCAL_MEM_FENCE); // Ensure updates are visible to all work-items
             }
 
-            // Write the result of this workgroup to the partial sums array
+            // Write the results of this workgroup to the partial sums arrays
             if (local_id == 0) {
                 partialSums[group_id] = localSums[0];
+                partialSumsSquares[group_id] = localSumsSquares[0];
             }
         }
 )";
@@ -71,8 +78,10 @@ int main() {
     double sum2 = 0;
     gpu_computations.sum_vector(vec, sum, sum2, vec.size());
     std::cout << "Sum: " << sum << std::endl;
+    std::cout << "Sum of squares: " << sum2 << std::endl;
 
     std::cout << "check sum: " << std::accumulate(vec.begin(), vec.end(), 0.0) << std::endl;
+    std::cout << "check sum of squares: " << std::inner_product(vec.begin(), vec.end(), vec.begin(), 0.0) << std::endl;
 
 
     return 0;

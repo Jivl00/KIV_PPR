@@ -80,6 +80,7 @@ void GPU_computations::sum_vector(std::vector<double> &arr, double &sum, double 
     // Create buffers
     cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, arr.data());
     cl::Buffer buffer_partial_sums(context, CL_MEM_WRITE_ONLY, sizeof(double) * num_workgroups);
+    cl::Buffer buffer_partial_sums_squares(context, CL_MEM_WRITE_ONLY, sizeof(double) * num_workgroups);
 
     // Create kernel for vector_sum
     cl::Kernel kernel_vector_sum(program, "vector_sums");
@@ -87,7 +88,9 @@ void GPU_computations::sum_vector(std::vector<double> &arr, double &sum, double 
     // Set kernel arguments for vector_sum
     kernel_vector_sum.setArg(0, buffer_arr);
     kernel_vector_sum.setArg(1, buffer_partial_sums);
-    kernel_vector_sum.setArg(2, cl::Local(sizeof(double) * workgroup_size));
+    kernel_vector_sum.setArg(2, buffer_partial_sums_squares);
+    kernel_vector_sum.setArg(3, cl::Local(sizeof(double) * workgroup_size));
+    kernel_vector_sum.setArg(4, cl::Local(sizeof(double) * workgroup_size));
 
     // Execute kernel for vector_sum
     cl::NDRange global(global_size);
@@ -97,10 +100,13 @@ void GPU_computations::sum_vector(std::vector<double> &arr, double &sum, double 
 
     // Read partial sums from device
     std::vector<double> partial_sums(num_workgroups);
+    std::vector<double> partial_sums_squares(num_workgroups);
     queue.enqueueReadBuffer(buffer_partial_sums, CL_TRUE, 0, sizeof(double) * num_workgroups, partial_sums.data());
+    queue.enqueueReadBuffer(buffer_partial_sums_squares, CL_TRUE, 0, sizeof(double) * num_workgroups, partial_sums_squares.data());
 
     // Final reduction on the host
     sum = std::accumulate(partial_sums.begin(), partial_sums.end(), 0.0);
+    sum2 = std::accumulate(partial_sums_squares.begin(), partial_sums_squares.end(), 0.0);
 }
 
 
