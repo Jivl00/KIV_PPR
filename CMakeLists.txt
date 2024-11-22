@@ -7,24 +7,30 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /Wall /openmp /arch:AVX2")
 find_package(OpenCL REQUIRED)
 
-include_directories(.)
+include_directories(src
+        src/utils
+        src/data_loader
+        src/sort/cpu
+        src/sort/gpu
+        src/statistics/cpu
+        src/statistics/gpu)
 
 add_executable(SP
-        merge_sort.cpp
-        merge_sort.h
-        main.cpp
-        data_loader.h
-        data_loader.cpp
-        my_utils.cpp
-        my_utils.h
-        statistics.cpp
-        statistics.h
-        openCL.cpp
-        openCL.h
-        openCL.h
-        openCL_utils.cpp
-        openCL_utils.h
-        openCL_utils.h
+        src/sort/cpu/merge_sort.cpp
+        src/sort/cpu/merge_sort.h
+        src/main.cpp
+        src/data_loader/data_loader.h
+        src/data_loader/data_loader.cpp
+        src/utils/my_utils.cpp
+        src/utils/my_utils.h
+        src/statistics/cpu/statistics.cpp
+        src/statistics/cpu/statistics.h
+        src/openCL.cpp
+        src/openCL.h
+        src/openCL.h
+        src/openCL_utils.cpp
+        src/openCL_utils.h
+        src/openCL_utils.h
 )
 
 target_link_libraries(SP OpenCL::OpenCL)
