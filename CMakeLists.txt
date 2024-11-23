@@ -13,7 +13,9 @@ include_directories(src
         src/sort/cpu
         src/sort/gpu
         src/statistics/cpu
-        src/statistics/gpu)
+        src/statistics/gpu
+        lib
+        lib/drawing)
 
 add_executable(SP
         src/sort/cpu/merge_sort.cpp
@@ -33,6 +35,14 @@ add_executable(SP
         src/openCL_utils.h
         src/statistics/gpu/GPU_computations.cpp
         src/statistics/gpu/GPU_computations.h
+        lib/drawing/Drawing.cpp
+        lib/drawing/Drawing.h
+        lib/drawing/IRenderer.h
+        lib/drawing/SVGRenderer.cpp
+        lib/drawing/SVGRenderer.h
+        src/svg_ploter/svg_ploter.cpp
+        src/svg_ploter/svg_ploter.h
+        src/svg_ploter/svg_ploter.h
 )
 
 target_link_libraries(SP OpenCL::OpenCL)
