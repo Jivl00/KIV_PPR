@@ -10,31 +10,28 @@ find_package(OpenCL REQUIRED)
 include_directories(src
         src/utils
         src/data_loader
-        src/sort/cpu
-        src/sort/gpu
+        src/data_processing/CPU/
+        src/data_processing/GPU/
         src/statistics/cpu
         src/statistics/gpu
         lib
         lib/drawing)
 
 add_executable(SP
-        src/sort/cpu/merge_sort.cpp
-        src/sort/cpu/merge_sort.h
+        src/data_processing/CPU/merge_sort.cpp
+        src/data_processing/CPU/merge_sort.h
         src/main.cpp
         src/data_loader/data_loader.h
         src/data_loader/data_loader.cpp
         src/utils/my_utils.cpp
         src/utils/my_utils.h
-        src/statistics/cpu/statistics.cpp
-        src/statistics/cpu/statistics.h
-        src/openCL.cpp
-        src/openCL.h
-        src/openCL.h
-        src/openCL_utils.cpp
-        src/openCL_utils.h
-        src/openCL_utils.h
-        src/statistics/gpu/GPU_computations.cpp
-        src/statistics/gpu/GPU_computations.h
+        src/data_processing/CPU/statistics.cpp
+        src/data_processing/CPU/statistics.h
+        src/data_processing/GPU/openCL.cpp
+        src/data_processing/GPU/openCL.h
+        src/data_processing/GPU/openCL.h
+        src/data_processing/GPU/GPU_calc.cpp
+        src/data_processing/GPU/GPU_calc.h
         lib/drawing/Drawing.cpp
         lib/drawing/Drawing.h
         lib/drawing/IRenderer.h
@@ -43,6 +40,7 @@ add_executable(SP
         src/svg_ploter/svg_ploter.cpp
         src/svg_ploter/svg_ploter.h
         src/svg_ploter/svg_ploter.h
+        src/utils/my_utils2.h
 )
 
 target_link_libraries(SP OpenCL::OpenCL)

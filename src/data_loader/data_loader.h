@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <execution>
 #include "my_utils.h"
+#include "my_utils2.h"
 
 /** Data structure to store accelerometer data */
 struct data {

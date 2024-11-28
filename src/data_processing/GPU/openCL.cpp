@@ -1,8 +1,6 @@
-#include "openCL_utils.h"
-#include "GPU_computations.h"
+#include "GPU_calc.h"
 #include <iostream>
 #include <vector>
-#include <limits>
 #include <numeric>
 #include <algorithm>
 
@@ -96,7 +94,7 @@
 //)";
 //
 //
-//    GPU_computations gpu_computations{kernelSource};
+//    GPU_data_processing gpu_computations{kernelSource};
 //
 //    std::vector<double> vec = {8, 6, 9, 5, -99, -6, 3, 44, 5, 2, 8, 888, -1, -22, 55555};
 ////    std::vector<double> vec(20000000, 2.0);

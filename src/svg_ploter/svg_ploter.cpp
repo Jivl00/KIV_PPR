@@ -190,29 +190,29 @@ void plot_graph(
     }
 }
 
-int main() {
-    // Data points for multiple lines
-    std::vector<std::vector<double>> x_points_all = {
-            {1, 2, 3, 4, 5},  // x-values for first line
-            {1, 2, 3, 4, 5},  // x-values for second line
-            {1, 2, 3, 4, 5}   // x-values for third line
-    };
-
-    std::vector<std::vector<double>> y_points_all = {
-            {1, 4, 9, 16, 25},  // y-values for first line
-            {5, 3, 9, 16, 2},   // y-values for second line
-            {1, 4, 7, 6, 5}     // y-values for third line
-    };
-
-    std::vector<std::string> line_labels = {"Line 1", "Line 2", "Line 3"};
-
-    try {
-        plot_graph(x_points_all, y_points_all, line_labels,
-                   "X Axis", "Y Axis", "Multiple Line Graph", "line_graph_multiple_lines.svg");
-        std::cout << "Graph saved to 'line_graph_multiple_lines.svg'" << std::endl;
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-    }
-
-    return 0;
-}
+//int main() {
+//    // Data points for multiple lines
+//    std::vector<std::vector<double>> x_points_all = {
+//            {1, 2, 3, 4, 5},  // x-values for first line
+//            {1, 2, 3, 4, 5},  // x-values for second line
+//            {1, 2, 3, 4, 5}   // x-values for third line
+//    };
+//
+//    std::vector<std::vector<double>> y_points_all = {
+//            {1, 4, 9, 16, 25},  // y-values for first line
+//            {5, 3, 9, 16, 2},   // y-values for second line
+//            {1, 4, 7, 6, 5}     // y-values for third line
+//    };
+//
+//    std::vector<std::string> line_labels = {"Line 1", "Line 2", "Line 3"};
+//
+//    try {
+//        plot_graph(x_points_all, y_points_all, line_labels,
+//                   "X Axis", "Y Axis", "Multiple Line Graph", "line_graph_multiple_lines.svg");
+//        std::cout << "Graph saved to 'line_graph_multiple_lines.svg'" << std::endl;
+//    } catch (const std::exception& e) {
+//        std::cerr << "Error: " << e.what() << std::endl;
+//    }
+//
+//    return 0;
+//}

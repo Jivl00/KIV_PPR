@@ -9,7 +9,6 @@
 
 #include "my_utils.h"
 
-
 /**
  * @brief Sums the elements of the array from start to start + size and copies them to halve_arr
  * @param arr - vector to sum and copy the elements from

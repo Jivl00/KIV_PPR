@@ -49,13 +49,25 @@ double CV(double &sum, double &sum2, size_t n);
 double MAD(std::vector<double> &arr, size_t n, bool is_vectorized, const ExecutionPolicy &policy);
 
 /**
- * @brief Compute the coefficient of variance and median absolute deviation
- * @param vec - vector of doubles
- * @param cv - coefficient of variance (output)
- * @param mad - median absolute deviation (output)
- * @param is_vectorized - flag to indicate if vectorization is enabled
- * @param policy - execution policy - parallel or sequential
- * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
+ * CPU_data_processing class used to compute the coefficient of variance and median absolute deviation.
+ * Serves as a wrapper so std::visit can be used in the main function - so based on user input, the
+ * appropriate computation can be used (CPU or GPU).
+ * Basically, a static polymorphism is used here but without the ancestor class - not much in common
+ * between the two classes.
  */
-int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized, const ExecutionPolicy &policy);
+class CPU_data_processing {
+public:
 
+    /**
+     * @brief Compute the coefficient of variance and median absolute deviation
+     * @param vec - vector of doubles
+     * @param cv - coefficient of variance (output)
+     * @param mad - median absolute deviation (output)
+     * @param is_vectorized - flag to indicate if vectorization is enabled
+     * @param policy - execution policy - parallel or sequential
+     * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
+     */
+    int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized,
+                       const ExecutionPolicy &policy);
+
+};

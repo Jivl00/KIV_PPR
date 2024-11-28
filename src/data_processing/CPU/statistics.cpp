@@ -73,7 +73,7 @@ double MAD(std::vector<double> &arr, size_t n, const bool is_vectorized, const E
     return find_median(abs_diff_arr, n);
 }
 
-int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const bool is_vectorized,
+int CPU_data_processing::compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const bool is_vectorized,
                    const ExecutionPolicy &policy) {
     double sum = 0;
     double sum2 = 0;

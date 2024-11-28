@@ -8,6 +8,14 @@
 #include <execution>
 #include <map>
 
+#ifdef min
+#undef min
+#endif
+
+#ifdef max
+#undef max
+#endif
+
 /**
  * @brief Measure the time taken by a function to execute
  * Using variadic templates to accept any function and its arguments
@@ -26,6 +34,7 @@ auto measure_time(Func &&func, Args &&... args) {
     std::chrono::duration<double> duration = end - start;
     return std::make_tuple(duration.count(), result);
 }
+
 
 /**
  * @brief Execution policy for parallelism
