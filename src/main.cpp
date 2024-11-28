@@ -4,8 +4,8 @@
 #include <execution>
 
 #include "data_loader.h"
-#include "execution_policy.h"
-#include "device_type.h"
+#include "data_processing/execution_policy.h"
+#include "data_processing/device_type.h"
 #include "my_utils.h"
 
 const std::string DATA_FILE = "data/ACC_001.csv";

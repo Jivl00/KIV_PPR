@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <execution>
 #include "my_utils.h"
-#include "device_type.h"
+#include "data_processing/device_type.h"
 
 /** Data structure to store accelerometer data */
 struct data {

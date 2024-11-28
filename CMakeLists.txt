@@ -39,8 +39,8 @@ add_executable(SP
         src/svg_ploter/svg_ploter.cpp
         src/svg_ploter/svg_ploter.h
         src/svg_ploter/svg_ploter.h
-        src/utils/device_type.h
-        src/utils/execution_policy.h
+        src/data_processing/device_type.h
+        src/data_processing/execution_policy.h
 )
 
 target_link_libraries(SP OpenCL::OpenCL)
