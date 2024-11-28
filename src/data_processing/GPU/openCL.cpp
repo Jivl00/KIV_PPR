@@ -102,7 +102,7 @@
 //    std::vector<double> abs_diff(vec.size());
 //    double median = 10.0;
 //    const bool par = true;
-//    ExecutionPolicy policy(par ? ExecutionPolicy::Type::Parallel : ExecutionPolicy::Type::Sequential);
+//    execution_policy policy(par ? execution_policy::e_type::Parallel : execution_policy::e_type::Sequential);
 //    gpu_computations.abs_diff_calc(vec, abs_diff, median, vec.size(), false, policy);
 //
 //    // print the first 10 elements of the result

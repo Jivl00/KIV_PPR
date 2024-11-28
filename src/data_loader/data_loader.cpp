@@ -1,6 +1,6 @@
 #include "data_loader.h"
 
-int load_data(const std::string &filename, data &data, const ExecutionPolicy &policy) {
+int load_data(const std::string &filename, data &data, const execution_policy &policy) {
     // open the file in binary mode
     FILE* file = nullptr;
     errno_t err = fopen_s(&file, filename.c_str(), "rb");

@@ -27,7 +27,7 @@ double find_median(std::vector<double> &arr, size_t n);
  * @param policy - execution policy - parallel or sequential
  */
 void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n,
-                   bool is_vectorized, const ExecutionPolicy &policy);
+                   bool is_vectorized, const execution_policy &policy);
 
 /**
  * @brief Calculate the coefficient of variance
@@ -46,7 +46,7 @@ double CV(double &sum, double &sum2, size_t n);
  * @param policy - execution policy - parallel or sequential
  * @return median absolute deviation
  */
-double MAD(std::vector<double> &arr, size_t n, bool is_vectorized, const ExecutionPolicy &policy);
+double MAD(std::vector<double> &arr, size_t n, bool is_vectorized, const execution_policy &policy);
 
 /**
  * CPU_data_processing class used to compute the coefficient of variance and median absolute deviation.
@@ -68,6 +68,6 @@ public:
      * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
      */
     int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized,
-                       const ExecutionPolicy &policy);
+                       const execution_policy &policy);
 
 };

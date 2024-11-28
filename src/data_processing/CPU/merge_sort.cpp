@@ -3,7 +3,7 @@
 
 void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr,
                   size_t start, size_t size, double &sum, double &sum2,
-                  const ExecutionPolicy &policy) {
+                  const execution_policy &policy) {
 
     size_t max_num_threads = std::thread::hardware_concurrency();
     size_t chunk_size = size / max_num_threads;
@@ -40,7 +40,7 @@ void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr
 
 void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve_arr,
                       size_t start, size_t size, double &sum, double &sum2,
-                      const ExecutionPolicy &policy) {
+                      const execution_policy &policy) {
 
     size_t max_num_threads = std::thread::hardware_concurrency();
     size_t chunk_size = size / max_num_threads;
@@ -99,7 +99,7 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 }
 
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, double &sum, double &sum2,
-                     const bool is_vectorized, const ExecutionPolicy &policy) {
+                     const bool is_vectorized, const execution_policy &policy) {
     size_t n1 = m - l + 1;
     size_t n2 = r - m;
 
@@ -149,7 +149,7 @@ void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2, const std::
 }
 
 int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool is_vectorized,
-              const ExecutionPolicy &policy) {
+              const execution_policy &policy) {
     size_t n = arr.size();
     size_t curr_size;
     // divide the array into halves of size 1, 2, 4, 8, ... until the size is less than half the array size

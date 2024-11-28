@@ -7,6 +7,7 @@
 #include <variant>
 #include <execution>
 #include <map>
+#include "execution_policy.h"
 
 #ifdef min
 #undef min
@@ -34,36 +35,3 @@ auto measure_time(Func &&func, Args &&... args) {
     std::chrono::duration<double> duration = end - start;
     return std::make_tuple(duration.count(), result);
 }
-
-
-/**
- * @brief Execution policy for parallelism
- *
- * @details
- *  - Sequential: std::execution::seq
- *  - Parallel: std::execution::par
- */
-class ExecutionPolicy {
-public:
-    enum class Type {
-        Sequential,
-        Parallel
-    };
-    const std::map<Type, std::variant<std::execution::sequenced_policy, std::execution::parallel_policy>> policy_map = {
-            {Type::Sequential, std::execution::seq},
-            {Type::Parallel,   std::execution::par}
-    };
-
-    explicit ExecutionPolicy(Type type) : type_(type) {}
-
-    /**
-     * @brief Get the execution policy as a variant
-     * @return std::variant<std::execution::sequenced_policy or std::execution::parallel_policy>
-     */
-    [[nodiscard]] std::variant<std::execution::sequenced_policy, std::execution::parallel_policy> get_policy() const {
-        return policy_map.at(type_);
-    }
-
-private:
-    Type type_;
-};

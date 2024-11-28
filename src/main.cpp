@@ -3,27 +3,28 @@
 #include <map>
 #include <execution>
 
-#include "my_utils.h"
 #include "data_loader.h"
-#include "my_utils2.h"
+#include "execution_policy.h"
+#include "device_type.h"
+#include "my_utils.h"
 
 const std::string DATA_FILE = "data/ACC_001.csv";
 const bool par = true; // parallel
-const bool vec = true; // vectorized
+const bool vec = false; // vectorized
 const bool gpu = false; // GPU
 
 
 int main() {
     // set device type - CPU or GPU
-    DeviceType device(gpu ? DeviceType::DType::GPU : DeviceType::DType::CPU);
+    device_type device(gpu ? device_type::d_type::GPU : device_type::d_type::CPU);
     std::cout << "Running on " << (gpu ? "GPU" : "CPU") << std::endl;
     // set execution policy - parallel or sequential
-    ExecutionPolicy policy(par ? ExecutionPolicy::Type::Parallel : ExecutionPolicy::Type::Sequential);
+    execution_policy policy(par ? execution_policy::e_type::Parallel : execution_policy::e_type::Sequential);
     std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
 
     // load data from file
     struct data data;
-    auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const ExecutionPolicy& policy) {
+    auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const execution_policy& policy) {
         return load_data(filename, data, policy);
     }, DATA_FILE, data, std::cref(policy));
 
@@ -54,7 +55,7 @@ int main() {
         double MAD = 0;
 
         std::visit([&](auto &&device) {
-            auto [stat_time, stat_ret] = measure_time([&](std::vector<double> &vec, double &cv, double &mad, bool is_vectorized, const ExecutionPolicy &policy) {
+            auto [stat_time, stat_ret] = measure_time([&](std::vector<double> &vec, double &cv, double &mad, bool is_vectorized, const execution_policy &policy) {
                 return device.compute_CV_MAD(vec, cv, mad, is_vectorized, policy);
             }, data_vec, CV, MAD, vec, std::cref(policy));
 

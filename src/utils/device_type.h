@@ -14,18 +14,18 @@
  *  - GPU
  */
 
-class DeviceType {
+class device_type {
 public:
-    enum class DType {
+    enum class d_type {
         CPU,
         GPU
     };
-    const std::map<DType, std::variant<CPU_data_processing, GPU_data_processing>> device_map = {
-            {DType::CPU, CPU_data_processing()},
-            {DType::GPU, GPU_data_processing()}
+    const std::map<d_type, std::variant<CPU_data_processing, GPU_data_processing>> device_map = {
+            {d_type::CPU, CPU_data_processing()},
+            {d_type::GPU, GPU_data_processing()}
     };
 
-    explicit DeviceType(DType type) : type_(type) {}
+    explicit device_type(d_type type) : type_(type) {}
 
     /**
      * @brief Get the device as a variant
@@ -36,6 +36,6 @@ public:
     }
 
 private:
-    DType type_;
+    d_type type_;
 };
 

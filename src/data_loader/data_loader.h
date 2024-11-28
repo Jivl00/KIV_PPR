@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <execution>
 #include "my_utils.h"
-#include "my_utils2.h"
+#include "device_type.h"
 
 /** Data structure to store accelerometer data */
 struct data {
@@ -21,4 +21,4 @@ struct data {
  * @param policy Execution policy
  * @return EXIT_SUCCESS if the data was loaded successfully, EXIT_FAILURE otherwise
  */
-int load_data(const std::string &filename, data &data, const ExecutionPolicy &policy);
+int load_data(const std::string &filename, data &data, const execution_policy &policy);

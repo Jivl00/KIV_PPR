@@ -21,7 +21,7 @@
  */
 void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr,
                   size_t start, size_t size, double &sum, double &sum2,
-                  const ExecutionPolicy &policy);
+                  const execution_policy &policy);
 
 
 /**
@@ -36,7 +36,7 @@ void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr
  */
 void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve_arr,
                       size_t start, size_t size, double &sum, double &sum2,
-                      const ExecutionPolicy &policy);
+                      const execution_policy &policy);
 
 /**
  * @brief Merges two halves arr[l..m] and arr[m+1..r] of the array and counts the sum and sum of squared elements
@@ -50,7 +50,7 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
  * @param policy - execution policy - parallel or sequential
  */
 void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r,
-                     double &sum, double &sum2, bool is_vectorized, const ExecutionPolicy &policy);
+                     double &sum, double &sum2, bool is_vectorized, const execution_policy &policy);
 
 /**
  * @brief Merges two halves arr[l..m] and arr[m+1..r] of the array
@@ -83,4 +83,4 @@ void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2,
  * @param policy - execution policy - parallel or sequential
  * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
  */
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, bool is_vectorized, const ExecutionPolicy &policy);
+int mergeSort(std::vector<double> &arr, double &sum, double &sum2, bool is_vectorized, const execution_policy &policy);

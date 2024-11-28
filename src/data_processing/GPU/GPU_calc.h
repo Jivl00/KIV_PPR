@@ -6,6 +6,7 @@
 
 #include <CL/cl.hpp>
 #include "my_utils.h"
+#include "statistics.h"
 
 #ifdef _MSC_VER
 #pragma comment(lib, "opencl.lib")
@@ -110,7 +111,7 @@ public:
     static cl::Device try_select_first_gpu();
     explicit GPU_data_processing();
     void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n,
-                   bool is_vectorized, const ExecutionPolicy &policy);
+                   bool is_vectorized, const execution_policy &policy);
     void sum_vector(std::vector<double> &arr, double &sum, double &sum2, size_t n);
     void sort_vector(std::vector<double> &arr, size_t n);
     /**
@@ -123,7 +124,7 @@ public:
      * @return EXIT_SUCCESS if successful, EXIT_FAILURE otherwise
      */
     int compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized,
-                       const ExecutionPolicy &policy);
+                       const execution_policy &policy);
 
 private:
     cl::Context context;

@@ -49,7 +49,7 @@ GPU_data_processing::GPU_data_processing() {
 }
 
 void GPU_data_processing::abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n,
-                                        bool is_vectorized, const ExecutionPolicy &policy) {
+                                        bool is_vectorized, const execution_policy &policy) {
     // Create buffers
     cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, arr.data());
     cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(double) * n);
@@ -124,7 +124,7 @@ void GPU_data_processing::sort_vector(std::vector<double> &arr, size_t n) {
         kernel_merge_sort.setArg(2, static_cast<unsigned int>(width));
         kernel_merge_sort.setArg(3, static_cast<unsigned int>(n));
 
-        cl::NDRange global(n / (width * 2));
+        cl::NDRange global((n+2*width-1) / (width * 2));
         queue.enqueueNDRangeKernel(kernel_merge_sort, cl::NullRange, global);
         queue.finish();
     }
@@ -134,7 +134,7 @@ void GPU_data_processing::sort_vector(std::vector<double> &arr, size_t n) {
 }
 
 int GPU_data_processing::compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized,
-                                        const ExecutionPolicy &policy) {
+                                        const execution_policy &policy) {
     double sum = 0;
     double sum2 = 0;
     size_t n = vec.size();
@@ -157,17 +157,15 @@ int GPU_data_processing::compute_CV_MAD(std::vector<double> &vec, double &cv, do
 //        return EXIT_FAILURE;
 //    }
 
+    this->sort_vector(vec, n);
+    std::cout << (std::is_sorted(vec.begin(), vec.end())? "Sorted" : "Not sorted") << std::endl;
     this->sum_vector(vec, sum, sum2, n);
 
-    this->sort_vector(vec, n);
-    auto median = (vec[n / 2] + vec[(n - 1) / 2]) / 2.0;
-    this->abs_diff_calc(vec, vec, median, n, is_vectorized, policy);
-    this->sort_vector(vec, n);
     mad = (vec[n / 2] + vec[(n - 1) / 2]) / 2.0;
-
-    double mean = sum / (double) n; // calculate the mean
-    double variance = sum2 / (double) n - mean * mean; // calculate the variance
-    cv = sqrt(variance) / mean;
+    this->abs_diff_calc(vec, vec, mad, n, is_vectorized, policy);
+    mad = find_median(vec, n);
+    cv = CV(sum, sum2, n);
 
     return EXIT_SUCCESS;
 }
+

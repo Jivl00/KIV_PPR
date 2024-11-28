@@ -15,7 +15,7 @@ double find_median(std::vector<double> &arr, size_t n) {
 
 
 void abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n,
-                   const bool is_vectorized, const ExecutionPolicy &policy) {
+                   const bool is_vectorized, const execution_policy &policy) {
     size_t i = 0;
     if (is_vectorized) {
 
@@ -63,7 +63,7 @@ double CV(double &sum, double &sum2, size_t n) {
 }
 
 // median absolute deviation
-double MAD(std::vector<double> &arr, size_t n, const bool is_vectorized, const ExecutionPolicy &policy) {
+double MAD(std::vector<double> &arr, size_t n, const bool is_vectorized, const execution_policy &policy) {
 
     double median = (arr[n / 2] + arr[(n - 1) / 2]) / 2.0;
     // array of absolute differences from the median - size n
@@ -74,7 +74,7 @@ double MAD(std::vector<double> &arr, size_t n, const bool is_vectorized, const E
 }
 
 int CPU_data_processing::compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, const bool is_vectorized,
-                   const ExecutionPolicy &policy) {
+                   const execution_policy &policy) {
     double sum = 0;
     double sum2 = 0;
     size_t n = vec.size();
