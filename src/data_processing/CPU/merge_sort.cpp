@@ -1,16 +1,16 @@
 #include "merge_sort.h"
 
 
-void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr,
-                  size_t start, size_t size, double &sum, double &sum2,
+void sum_and_copy(const std::vector<real> &arr, std::vector<real> &halve_arr,
+                  size_t start, size_t size, real &sum, real &sum2,
                   const execution_policy &policy) {
 
     size_t max_num_threads = std::thread::hardware_concurrency();
     size_t chunk_size = size / max_num_threads;
 
     // local sums and sum of squares for each thread
-    std::vector<double> local_sums(max_num_threads, 0.0);
-    std::vector<double> local_sums2(max_num_threads, 0.0);
+    std::vector<real> local_sums(max_num_threads, 0.0);
+    std::vector<real> local_sums2(max_num_threads, 0.0);
 
     // vector to hold the chunk indices for each thread
     std::vector<size_t> chunk_indices(max_num_threads);
@@ -23,7 +23,7 @@ void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr
                           size_t end_chunk = (chunk_id == max_num_threads - 1) ? size : start_chunk + chunk_size;
 
                           for (size_t i = start_chunk; i < end_chunk; i++) {
-                              double val = arr[i + start];  // get value from original array
+                              real val = arr[i + start];  // get value from original array
                               halve_arr[i] = val;  // copy value to halve array
 
                               // accumulate sum and sum of squares for this chunk
@@ -38,17 +38,17 @@ void sum_and_copy(const std::vector<double> &arr, std::vector<double> &halve_arr
     sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
 }
 
-void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve_arr,
-                      size_t start, size_t size, double &sum, double &sum2,
+void sum_and_copy_vec(const std::vector<real> &arr, std::vector<real> &halve_arr,
+                      size_t start, size_t size, real &sum, real &sum2,
                       const execution_policy &policy) {
 
     size_t max_num_threads = std::thread::hardware_concurrency();
     size_t chunk_size = size / max_num_threads;
-    size_t stride = sizeof(__m256d) / sizeof(double);
+    size_t stride = sizeof(STRIDE) / sizeof(real);
 
     // local sums and sum of squares for each thread
-    std::vector<double> local_sums(max_num_threads, 0.0);
-    std::vector<double> local_sums2(max_num_threads, 0.0);
+    std::vector<real> local_sums(max_num_threads, 0.0);
+    std::vector<real> local_sums2(max_num_threads, 0.0);
 
     // vector to hold the chunk indices for each thread
     std::vector<size_t> chunk_indices(max_num_threads);
@@ -60,22 +60,21 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
                           size_t start_chunk = chunk_id * chunk_size;
                           size_t end_chunk = (chunk_id == max_num_threads - 1) ? size : start_chunk + chunk_size;
 
-                          __m256d vec_sum = _mm256_setzero_pd();
-                          __m256d vec_sum2 = _mm256_setzero_pd();
+                          auto vec_sum = SETZERO();
+                          auto vec_sum2 = SETZERO();
 
                           for (size_t i = start_chunk; i < end_chunk; i += stride) {
-                              __m256d vec_vals = _mm256_loadu_pd(&arr[i + start]); // load elements
-                              _mm256_storeu_pd(&halve_arr[i], vec_vals); // store elements
-                              vec_sum = _mm256_add_pd(vec_sum, vec_vals); // accumulate sum
-                              vec_sum2 = _mm256_add_pd(vec_sum2,
-                                                       _mm256_mul_pd(vec_vals, vec_vals)); // accumulate sum of squares
+                              auto vec_vals = LOAD(&arr[i + start]); // load elements
+                              STORE(&halve_arr[i], vec_vals); // store elements
+                              vec_sum = ADD(vec_sum, vec_vals); // accumulate sum
+                              vec_sum2 = ADD(vec_sum2, MUL(vec_vals, vec_vals)); // accumulate sum of squares
                           }
 
                           // horizontal sum - sum of vector elements
-                          std::vector<double> temp_sum(stride, 0.0);
-                          std::vector<double> temp_sum2(stride, 0.0);
-                          _mm256_storeu_pd(temp_sum.data(), vec_sum);
-                          _mm256_storeu_pd(temp_sum2.data(), vec_sum2);
+                          std::vector<real> temp_sum(stride, 0.0);
+                          std::vector<real> temp_sum2(stride, 0.0);
+                          STORE(temp_sum.data(), vec_sum);
+                          STORE(temp_sum2.data(), vec_sum2);
                           for (size_t k = 0; k < stride; k++) {
                               local_sums[chunk_id] += temp_sum[k];
                               local_sums2[chunk_id] += temp_sum2[k];
@@ -83,7 +82,7 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
 
                           // handle any remaining elements (less than stride) in the tail
                           for (size_t i = end_chunk - (end_chunk % stride); i < end_chunk; i++) {
-                              double val = arr[i + start];  // get value from original array
+                              real val = arr[i + start];  // get value from original array
                               halve_arr[i] = val;  // copy value to halve array
 
                               // accumulate sum and sum of squares for this chunk
@@ -98,13 +97,13 @@ void sum_and_copy_vec(const std::vector<double> &arr, std::vector<double> &halve
     sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
 }
 
-void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, double &sum, double &sum2,
+void merge_and_count(std::vector<real> &arr, size_t l, size_t m, size_t r, real &sum, real &sum2,
                      const bool is_vectorized, const execution_policy &policy) {
     size_t n1 = m - l + 1;
     size_t n2 = r - m;
 
-    std::vector<double> L(n1);
-    std::vector<double> R(n2);
+    std::vector<real> L(n1);
+    std::vector<real> R(n2);
 
     if (is_vectorized) {
         sum_and_copy_vec(arr, L, l, n1, sum, sum2, policy);
@@ -117,22 +116,22 @@ void merge_and_count(std::vector<double> &arr, size_t l, size_t m, size_t r, dou
     merge(arr, l, n1, n2, L, R);
 }
 
-void merge_no_count(std::vector<double> &arr, size_t l, size_t m, size_t r) {
+void merge_no_count(std::vector<real> &arr, size_t l, size_t m, size_t r) {
     size_t n1 = m - l + 1; // size of left half
     size_t n2 = r - m; // size of right half
 
     // copy data to temp arrays L[] and R[]
-    std::vector<double> L(arr.begin() + static_cast<int>(l),
+    std::vector<real> L(arr.begin() + static_cast<int>(l),
                           arr.begin() + static_cast<int>(l) + static_cast<int>(n1));
-    std::vector<double> R(arr.begin() + static_cast<int>(m) + 1,
+    std::vector<real> R(arr.begin() + static_cast<int>(m) + 1,
                           arr.begin() + static_cast<int>(m) + 1 + static_cast<int>(n2));
 
 
     merge(arr, l, n1, n2, L, R);
 }
 
-void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2, const std::vector<double> &L,
-           const std::vector<double> &R) {
+void merge(std::vector<real> &arr, size_t l, size_t n1, size_t n2, const std::vector<real> &L,
+           const std::vector<real> &R) {
     size_t i = 0, j = 0, k = l;
     while (i < n1 && j < n2) { // while there are elements in both halves
         arr[k++] = L[i] <= R[j] ? L[i++] : R[j++]; // copy the smaller element
@@ -148,7 +147,7 @@ void merge(std::vector<double> &arr, size_t l, size_t n1, size_t n2, const std::
     }
 }
 
-int mergeSort(std::vector<double> &arr, double &sum, double &sum2, const bool is_vectorized,
+int mergeSort(std::vector<real> &arr, real &sum, real &sum2, const bool is_vectorized,
               const execution_policy &policy) {
     size_t n = arr.size();
     size_t curr_size;

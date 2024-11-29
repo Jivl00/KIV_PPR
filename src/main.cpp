@@ -34,7 +34,7 @@ int main() {
         std::cerr << "Failed to load data" << std::endl;
     }
 
-    std::map<std::string, std::reference_wrapper<std::vector<double>>> data_map = {
+    std::map<std::string, std::reference_wrapper<std::vector<real>>> data_map = {
             {"x", data.x},
             {"y", data.y},
             {"z", data.z}
@@ -42,7 +42,7 @@ int main() {
 
     for (const auto& pair : data_map) {
         const std::string& name = pair.first;
-        std::vector<double>& data_vec = pair.second;
+        std::vector<real>& data_vec = pair.second;
 
         std::cout << "\nColumn " << name << " :" << std::endl;
 
@@ -51,11 +51,11 @@ int main() {
         std::cout << n << " elements" << std::endl;
         std::cout << "=============================" << std::endl;
 
-        double CV = 0;
-        double MAD = 0;
+        real CV = 0;
+        real MAD = 0;
 
         std::visit([&](auto &&device) {
-            auto [stat_time, stat_ret] = measure_time([&](std::vector<double> &vec, double &cv, double &mad, bool is_vectorized, const execution_policy &policy) {
+            auto [stat_time, stat_ret] = measure_time([&](std::vector<real> &vec, real &cv, real &mad, bool is_vectorized, const execution_policy &policy) {
                 return device.compute_CV_MAD(vec, cv, mad, is_vectorized, policy);
             }, data_vec, CV, MAD, vec, std::cref(policy));
 

@@ -27,7 +27,7 @@ cl::Device GPU_data_processing::try_select_first_gpu() {
 GPU_data_processing::GPU_data_processing() {
     cl::Device device = try_select_first_gpu();
 
-    std::vector<std::pair<const char *, size_t>> source_codes{{kernelSource, strlen(kernelSource)}};
+    std::vector<std::pair<const char *, size_t>> source_codes{{kernel_source, strlen(kernel_source)}};
     const cl::Program::Sources &sources(source_codes);
     context = cl::Context{device};
     program = cl::Program{context, sources};
@@ -48,11 +48,11 @@ GPU_data_processing::GPU_data_processing() {
 
 }
 
-void GPU_data_processing::abs_diff_calc(std::vector<double> &arr, std::vector<double> &abs_diff, double median, size_t n,
+void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n,
                                         bool is_vectorized, const execution_policy &policy) {
     // Create buffers
-    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, arr.data());
-    cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(double) * n);
+    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
+    cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(real) * n);
 
     // Create kernel for abs_diff_calc
     cl::Kernel kernel_abs_diff(program, "abs_diff_calc");
@@ -68,18 +68,18 @@ void GPU_data_processing::abs_diff_calc(std::vector<double> &arr, std::vector<do
     queue.finish();
 
     // Read results for abs_diff_calc
-    queue.enqueueReadBuffer(buffer_abs_diff, CL_TRUE, 0, sizeof(double) * n, abs_diff.data());
+    queue.enqueueReadBuffer(buffer_abs_diff, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
 }
 
-void GPU_data_processing::sum_vector(std::vector<double> &arr, double &sum, double &sum2, size_t n) {
+void GPU_data_processing::sum_vector(std::vector<real> &arr, real &sum, real &sum2, size_t n) {
     const size_t workgroup_size = 256; // Choose a workgroup size
     const size_t global_size = ((n + workgroup_size - 1) / workgroup_size) * workgroup_size;
     const size_t num_workgroups = global_size / workgroup_size;
 
     // Create buffers
-    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, arr.data());
-    cl::Buffer buffer_partial_sums(context, CL_MEM_WRITE_ONLY, sizeof(double) * num_workgroups);
-    cl::Buffer buffer_partial_sums_squares(context, CL_MEM_WRITE_ONLY, sizeof(double) * num_workgroups);
+    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
+    cl::Buffer buffer_partial_sums(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
+    cl::Buffer buffer_partial_sums_squares(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
 
     // Create kernel for vector_sum
     cl::Kernel kernel_vector_sum(program, "vector_sums");
@@ -88,8 +88,8 @@ void GPU_data_processing::sum_vector(std::vector<double> &arr, double &sum, doub
     kernel_vector_sum.setArg(0, buffer_arr);
     kernel_vector_sum.setArg(1, buffer_partial_sums);
     kernel_vector_sum.setArg(2, buffer_partial_sums_squares);
-    kernel_vector_sum.setArg(3, cl::Local(sizeof(double) * workgroup_size));
-    kernel_vector_sum.setArg(4, cl::Local(sizeof(double) * workgroup_size));
+    kernel_vector_sum.setArg(3, cl::Local(sizeof(real) * workgroup_size));
+    kernel_vector_sum.setArg(4, cl::Local(sizeof(real) * workgroup_size));
 
     // Execute kernel for vector_sum
     cl::NDRange global(global_size);
@@ -98,10 +98,10 @@ void GPU_data_processing::sum_vector(std::vector<double> &arr, double &sum, doub
     queue.finish();
 
     // Read partial sums from device
-    std::vector<double> partial_sums(num_workgroups);
-    std::vector<double> partial_sums_squares(num_workgroups);
-    queue.enqueueReadBuffer(buffer_partial_sums, CL_TRUE, 0, sizeof(double) * num_workgroups, partial_sums.data());
-    queue.enqueueReadBuffer(buffer_partial_sums_squares, CL_TRUE, 0, sizeof(double) * num_workgroups, partial_sums_squares.data());
+    std::vector<real> partial_sums(num_workgroups);
+    std::vector<real> partial_sums_squares(num_workgroups);
+    queue.enqueueReadBuffer(buffer_partial_sums, CL_TRUE, 0, sizeof(real) * num_workgroups, partial_sums.data());
+    queue.enqueueReadBuffer(buffer_partial_sums_squares, CL_TRUE, 0, sizeof(real) * num_workgroups, partial_sums_squares.data());
 
     // Final reduction on the host
     sum = std::accumulate(partial_sums.begin(), partial_sums.end(), 0.0);
@@ -109,12 +109,12 @@ void GPU_data_processing::sum_vector(std::vector<double> &arr, double &sum, doub
 }
 
 
-void GPU_data_processing::sort_vector(std::vector<double> &arr, size_t n) {
+void GPU_data_processing::sort_vector(std::vector<real> &arr, size_t n) {
     // Temporary buffer for merging
-    std::vector<double> temp(n);
+    std::vector<real> temp(n);
 
-    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, arr.data());
-    cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(double) * n, temp.data());
+    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
+    cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, temp.data());
 
     cl::Kernel kernel_merge_sort(program, "merge_sort");
 
@@ -130,13 +130,13 @@ void GPU_data_processing::sort_vector(std::vector<double> &arr, size_t n) {
     }
 
     // Read the sorted array
-    queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(double) * n, arr.data());
+    queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(real) * n, arr.data());
 }
 
-int GPU_data_processing::compute_CV_MAD(std::vector<double> &vec, double &cv, double &mad, bool is_vectorized,
+int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &mad, bool is_vectorized,
                                         const execution_policy &policy) {
-    double sum = 0;
-    double sum2 = 0;
+    real sum = 0;
+    real sum2 = 0;
     size_t n = vec.size();
     // sort the data
 

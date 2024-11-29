@@ -4,7 +4,8 @@ cmake_minimum_required(VERSION 3.21)
 project(SP)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /openmp /arch:AVX2")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /openmp /arch:AVX2 /D_FLOAT")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /openmp /arch:AVX2")
 find_package(OpenCL REQUIRED)
 
 include_directories(src
@@ -26,9 +27,6 @@ add_executable(SP
         src/utils/my_utils.h
         src/data_processing/CPU/statistics.cpp
         src/data_processing/CPU/statistics.h
-        src/data_processing/GPU/openCL.cpp
-        src/data_processing/GPU/openCL.h
-        src/data_processing/GPU/openCL.h
         src/data_processing/GPU/GPU_calc.cpp
         src/data_processing/GPU/GPU_calc.h
         lib/drawing/Drawing.cpp

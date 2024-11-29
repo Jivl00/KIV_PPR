@@ -17,6 +17,30 @@
 #undef max
 #endif
 
+#ifdef _FLOAT
+using real = float;
+#define LOAD _mm256_loadu_ps
+#define STORE _mm256_storeu_ps
+#define SETZERO _mm256_setzero_ps
+#define ADD _mm256_add_ps
+#define SUB _mm256_sub_ps
+#define MUL _mm256_mul_ps
+#define ANDNOT _mm256_andnot_ps
+#define STRIDE __m256
+#define SET1 _mm256_set1_ps
+#else
+using real = double;
+#define LOAD _mm256_loadu_pd
+#define STORE _mm256_storeu_pd
+#define SETZERO _mm256_setzero_pd
+#define ADD _mm256_add_pd
+#define SUB _mm256_sub_pd
+#define MUL _mm256_mul_pd
+#define ANDNOT _mm256_andnot_pd
+#define STRIDE __m256d
+#define SET1 _mm256_set1_pd
+#endif
+
 /**
  * @brief Measure the time taken by a function to execute
  * Using variadic templates to accept any function and its arguments

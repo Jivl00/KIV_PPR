@@ -9,9 +9,9 @@
 
 /** Data structure to store accelerometer data */
 struct data {
-    std::vector<double> x;
-    std::vector<double> y;
-    std::vector<double> z;
+    std::vector<real> x;
+    std::vector<real> y;
+    std::vector<real> z;
 };
 
 /**
