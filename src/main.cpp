@@ -2,6 +2,7 @@
 #include <iostream>
 #include <map>
 #include <execution>
+#include <filesystem>
 
 #include "data_loader.h"
 #include "execution_policy.h"
@@ -14,62 +15,168 @@ const bool vec = false; // vectorized
 const bool gpu = false; // GPU
 
 
-int main() {
-    // set device type - CPU or GPU
-    device_type device(gpu ? device_type::d_type::GPU : device_type::d_type::CPU);
-    std::cout << "Running on " << (gpu ? "GPU" : "CPU") << std::endl;
-    // set execution policy - parallel or sequential
-    execution_policy policy(par ? execution_policy::e_type::Parallel : execution_policy::e_type::Sequential);
-    std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
+arg_parser set_args() {
+    arg_parser parser;
+    parser.add_argument("--help", "Show help message", false, false);
+    parser.add_argument("--input", "Path to input file or directory with data in .csv format", true, true);
+    parser.add_argument("--output", "Output directory for results", false, true, "results");
+    parser.add_argument("--repetitions", "Number of repetitions for the experiment", false, true, "1");
+    parser.add_argument("--num_partitions", "Number of partitions for the data", false, true, "1");
+    parser.add_argument("--gpu", "Device type - CPU or GPU", false, false);
+    parser.add_argument("--parallel", "Execution policy - parallel or sequential", false, false);
+    parser.add_argument("--vectorized", "AVX2 vectorization", false, false);
+    parser.add_argument("--all_variants", "Run all variants of the algorithm", false, false);
 
-    // load data from file
-    struct data data;
-    auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const execution_policy& policy) {
-        return load_data(filename, data, policy);
-    }, DATA_FILE, data, std::cref(policy));
 
-    if (load_ret == EXIT_SUCCESS) {
-        std::cout << "Data loaded in " << load_time << " seconds" << std::endl;
-    } else {
-        std::cerr << "Failed to load data" << std::endl;
+    auto &group = parser.add_mutually_exclusive_group();
+    group.add_argument("--gpu");
+    group.add_argument("--vectorized");
+    group.add_argument("--all_variants");
+
+    auto &group2 = parser.add_mutually_exclusive_group();
+    group2.add_argument("--parallel");
+    group2.add_argument("--all_variants");
+
+
+    parser.set_usage("Example usage: ./main --input data/ACC_001.csv --repetitions 10 --num_partitions 4 --gpu");
+    return parser;
+}
+
+std::vector<std::string> check_input(const std::string &input) {
+    std::vector<std::string> files;
+    if (!std::filesystem::exists(input)) { // check if the input file or directory exists
+        throw std::runtime_error("Input file or directory does not exist");
     }
-
-    std::map<std::string, std::reference_wrapper<std::vector<real>>> data_map = {
-            {"x", data.x},
-            {"y", data.y},
-            {"z", data.z}
-    };
-
-    for (const auto& pair : data_map) {
-        const std::string& name = pair.first;
-        std::vector<real>& data_vec = pair.second;
-
-        std::cout << "\nColumn " << name << " :" << std::endl;
-
-        size_t n = data_vec.size();
-
-        std::cout << n << " elements" << std::endl;
-        std::cout << "=============================" << std::endl;
-
-        real CV = 0;
-        real MAD = 0;
-
-        std::visit([&](auto &&device) {
-            auto [stat_time, stat_ret] = measure_time([&](std::vector<real> &data_vec, real &cv, real &mad, bool is_vectorized, const execution_policy &policy) {
-                return device.compute_CV_MAD(data_vec, cv, mad, is_vectorized, policy);
-            }, data_vec, CV, MAD, vec, std::cref(policy));
-
-            if (stat_ret == EXIT_SUCCESS) {
-                std::cout << "Coefficient of variance: " << CV << std::endl;
-                std::cout << "Median absolute deviation: " << MAD << std::endl;
-                std::cout << "Computed in " << stat_time << " seconds" << std::endl;
+    if (std::filesystem::is_directory(input)) {
+        for (const auto &entry: std::filesystem::directory_iterator(input)) {
+            if (entry.is_regular_file() && entry.path().extension() == ".csv") {
+                files.push_back(entry.path().string());
             } else {
-                std::cerr << "Failed to compute statistics" << std::endl;
+                std::cerr << "Skipping file " << entry.path().string() << std::endl;
             }
-
-        }, device.get_device());
-
+        }
     }
+    else if (std::filesystem::is_regular_file(input) && input.substr(input.find_last_of('.') + 1) == "csv") {
+        files.push_back(input);
+    } else {
+        throw std::runtime_error("Input file is not a .csv file");
+    }
+
+    if (files.empty()) {
+        throw std::runtime_error("No .csv files found in the input directory");
+    }
+
+    return files;
+}
+
+void check_output(const std::string &out_dir) {
+    if (!std::filesystem::exists(out_dir)) { // check if the output directory exists
+        std::filesystem::create_directory(out_dir);
+    }
+    if (!std::filesystem::is_directory(out_dir)) { // check if the output path is a directory
+        throw std::runtime_error("Output path is not a directory");
+    }
+}
+
+size_t check_numeric(const std::string &value, const std::string &name) {
+    if (!std::all_of(value.begin(), value.end(), ::isdigit)) {
+        throw std::runtime_error(name + " must be a positive integer");
+    }
+    if (std::stoul(value) == 0) { // check if the value is a positive integer
+        throw std::runtime_error(name + " must be a positive integer");
+    }
+    return std::stoul(value);
+}
+
+int main(int argc, char *argv[]) {
+    arg_parser parser = set_args();
+
+    try {
+        parser.parse_args(argc, argv);
+        const std::string &input = parser.arguments.at("--input").value;
+        auto files = check_input(input);
+        const std::string &output = parser.arguments.at("--output").value;
+        check_output(output);
+        const size_t repetitions = check_numeric(parser.arguments.at("--repetitions").value, "--repetitions");
+        const size_t num_partitions = check_numeric(parser.arguments.at("--num_partitions").value, "--num_partitions");
+        bool gpu = parser.arguments.at("--gpu").value == "true";
+        bool par = parser.arguments.at("--parallel").value == "true";
+        bool vec = parser.arguments.at("--vectorized").value == "true";
+        bool all_variants = parser.arguments.at("--all_variants").value == "true";
+
+        std::cout << "Input: " << input << std::endl;
+        std::cout << "Output: " << output << std::endl;
+        std::cout << "Repetitions: " << repetitions << std::endl;
+        std::cout << "Number of partitions: " << num_partitions << std::endl;
+        std::cout << "Device type: " << (gpu ? "GPU" : "CPU") << std::endl;
+        std::cout << "Execution policy: " << (par ? "parallel" : "sequential") << std::endl;
+        std::cout << "Vectorization: " << (vec ? "enabled" : "disabled") << std::endl;
+        std::cout << "All variants: " << (all_variants ? "enabled" : "disabled") << std::endl;
+    } catch (const std::exception &e) {
+        std::cerr << e.what() << std::endl;
+        return EXIT_FAILURE;
+    }
+
+
+    //    // set device type - CPU or GPU
+    //    device_type device(gpu ? device_type::d_type::GPU : device_type::d_type::CPU);
+    //    std::cout << "Running on " << (gpu ? "GPU" : "CPU") << std::endl;
+    //    // set execution policy - parallel or sequential
+    //    execution_policy policy(par ? execution_policy::e_type::Parallel : execution_policy::e_type::Sequential);
+    //    std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
+    //
+    //    // load data from file
+    //    struct data data;
+    //    auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const execution_policy& policy) {
+    //        return load_data(filename, data, policy);
+    //    }, DATA_FILE, data, std::cref(policy));
+    //
+    //    if (load_ret == EXIT_SUCCESS) {
+    //        std::cout << "Data loaded in " << load_time << " seconds" << std::endl;
+    //    } else {
+    //        std::cerr << "Failed to load data" << std::endl;
+    //    }
+    //
+    //    std::map<std::string, std::reference_wrapper<std::vector<real>>> data_map = {
+    //            {"x", data.x},
+    //            {"y", data.y},
+    //            {"z", data.z}
+    //    };
+    //
+    //    for (const auto& pair : data_map) {
+    //        const std::string& name = pair.first;
+    //        std::vector<real>& data_vec = pair.second;
+    //
+    //        std::cout << "\nColumn " << name << " :" << std::endl;
+    //
+    //        size_t n = data_vec.size();
+    //
+    //        std::cout << n << " elements" << std::endl;
+    //        std::cout << "=============================" << std::endl;
+    //
+    //        real CV = 0;
+    //        real MAD = 0;
+    //
+    //        std::visit([&](auto &&device) {
+    //            auto [stat_time, stat_ret] = measure_time([&](std::vector<real> &data_vec, real &cv, real &mad, bool is_vectorized, const execution_policy &policy) {
+    //                return device.compute_CV_MAD(data_vec, cv, mad, is_vectorized, policy);
+    //            }, data_vec, CV, MAD, vec, std::cref(policy));
+    //
+    //            if (stat_ret == EXIT_SUCCESS) {
+    //                std::cout << "Coefficient of variance: " << CV << std::endl;
+    //                std::cout << "Median absolute deviation: " << MAD << std::endl;
+    //                std::cout << "Computed in " << stat_time << " seconds" << std::endl;
+    //            } else {
+    //                std::cerr << "Failed to compute statistics" << std::endl;
+    //            }
+    //
+    //        }, device.get_device());
+    //
+    //    }
 
     return 0;
 }
+
+
+
+
