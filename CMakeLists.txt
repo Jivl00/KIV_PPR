@@ -11,6 +11,7 @@ find_package(OpenCL REQUIRED)
 include_directories(src
         src/utils
         src/data_loader
+        src/data_processing/
         src/data_processing/CPU/
         src/data_processing/GPU/
         src/statistics/cpu

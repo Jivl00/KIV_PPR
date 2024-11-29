@@ -7,7 +7,7 @@
 #include <variant>
 #include <execution>
 #include <map>
-#include "data_processing/execution_policy.h"
+#include "execution_policy.h"
 
 #ifdef min
 #undef min
