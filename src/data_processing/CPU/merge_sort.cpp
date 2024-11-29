@@ -34,8 +34,8 @@ void sum_and_copy(const std::vector<real> &arr, std::vector<real> &halve_arr,
     }, policy.get_policy());
 
     // combine results from all threads - reduction of local sums
-    sum += std::accumulate(local_sums.begin(), local_sums.end(), 0.0);
-    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
+    sum += std::accumulate(local_sums.begin(), local_sums.end(), static_cast<real>(0.0));
+    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), static_cast<real>(0.0));
 }
 
 void sum_and_copy_vec(const std::vector<real> &arr, std::vector<real> &halve_arr,
@@ -47,8 +47,8 @@ void sum_and_copy_vec(const std::vector<real> &arr, std::vector<real> &halve_arr
     size_t stride = sizeof(STRIDE) / sizeof(real);
 
     // local sums and sum of squares for each thread
-    std::vector<real> local_sums(max_num_threads, 0.0);
-    std::vector<real> local_sums2(max_num_threads, 0.0);
+    std::vector<real> local_sums(max_num_threads, static_cast<real>(0.0));
+    std::vector<real> local_sums2(max_num_threads, static_cast<real>(0.0));
 
     // vector to hold the chunk indices for each thread
     std::vector<size_t> chunk_indices(max_num_threads);
@@ -71,8 +71,8 @@ void sum_and_copy_vec(const std::vector<real> &arr, std::vector<real> &halve_arr
                           }
 
                           // horizontal sum - sum of vector elements
-                          std::vector<real> temp_sum(stride, 0.0);
-                          std::vector<real> temp_sum2(stride, 0.0);
+                          std::vector<real> temp_sum(stride, static_cast<real>(0.0));
+                          std::vector<real> temp_sum2(stride, static_cast<real>(0.0));
                           STORE(temp_sum.data(), vec_sum);
                           STORE(temp_sum2.data(), vec_sum2);
                           for (size_t k = 0; k < stride; k++) {
@@ -93,8 +93,8 @@ void sum_and_copy_vec(const std::vector<real> &arr, std::vector<real> &halve_arr
     }, policy.get_policy());
 
     // combine results from all threads - reduction of local sums
-    sum += std::accumulate(local_sums.begin(), local_sums.end(), 0.0);
-    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), 0.0);
+    sum += std::accumulate(local_sums.begin(), local_sums.end(), static_cast<real>(0.0));
+    sum2 += std::accumulate(local_sums2.begin(), local_sums2.end(), static_cast<real>(0.0));
 }
 
 void merge_and_count(std::vector<real> &arr, size_t l, size_t m, size_t r, real &sum, real &sum2,

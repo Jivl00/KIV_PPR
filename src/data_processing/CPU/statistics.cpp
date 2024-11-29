@@ -10,7 +10,7 @@ real find_median(std::vector<real> &arr, size_t n) {
         curr = arr[left_middle] >= arr[right_middle] ? arr[right_middle++]
                                                      : arr[left_middle--]; // move to the next element
     }
-    return n & 1 ? curr : (prev + curr) / 2.0; // if n is odd return the current element, else return the average
+    return n & 1 ? curr : (prev + curr) / static_cast<real>(2.0); // if n is odd return the current element, else return the average
 }
 
 
@@ -65,7 +65,7 @@ real CV(real &sum, real &sum2, size_t n) {
 // median absolute deviation
 real MAD(std::vector<real> &arr, size_t n, const bool is_vectorized, const execution_policy &policy) {
 
-    real median = (arr[n / 2] + arr[(n - 1) / 2]) / 2.0;
+    real median = (arr[n / 2] + arr[(n - 1) / 2]) / static_cast<real>(2.0);
     // array of absolute differences from the median - size n
     std::vector<real> abs_diff_arr(n);
     abs_diff_calc(arr, abs_diff_arr, median, n, is_vectorized, policy);

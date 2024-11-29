@@ -8,7 +8,8 @@ cl::Device GPU_data_processing::try_select_first_gpu() {
         std::vector<cl::Device> devices;
         platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
 
-        for (auto &device: devices) {
+        if (!devices.empty()) {
+            auto &device = devices.front();
             auto desc = device.getInfo<CL_DEVICE_NAME>();
             std::cout << "Selected device " << desc << " on platform " << platform.getInfo<CL_PLATFORM_NAME>()
                       << std::endl;
@@ -41,6 +42,7 @@ GPU_data_processing::GPU_data_processing() {
             std::cerr << "Build Log:\n" << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
     } catch (const std::exception &e) {
         std::cerr << "Build Log:\n" << program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(device) << std::endl;
+        std::cerr << e.what() << std::endl;
         throw std::runtime_error("Failed to build OpenCL program");
     }
 
@@ -50,6 +52,10 @@ GPU_data_processing::GPU_data_processing() {
 
 void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n,
                                         bool is_vectorized, const execution_policy &policy) {
+    // using unused policy and is_vectorized parameters to avoid warnings
+    (void) policy;
+    (void) is_vectorized;
+
     // Create buffers
     cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
     cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(real) * n);
@@ -104,8 +110,8 @@ void GPU_data_processing::sum_vector(std::vector<real> &arr, real &sum, real &su
     queue.enqueueReadBuffer(buffer_partial_sums_squares, CL_TRUE, 0, sizeof(real) * num_workgroups, partial_sums_squares.data());
 
     // Final reduction on the host
-    sum = std::accumulate(partial_sums.begin(), partial_sums.end(), 0.0);
-    sum2 = std::accumulate(partial_sums_squares.begin(), partial_sums_squares.end(), 0.0);
+    sum = std::accumulate(partial_sums.begin(), partial_sums.end(), static_cast<real>(0.0));
+    sum2 = std::accumulate(partial_sums_squares.begin(), partial_sums_squares.end(), static_cast<real>(0.0));
 }
 
 
@@ -161,7 +167,7 @@ int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &
     std::cout << (std::is_sorted(vec.begin(), vec.end())? "Sorted" : "Not sorted") << std::endl;
     this->sum_vector(vec, sum, sum2, n);
 
-    mad = (vec[n / 2] + vec[(n - 1) / 2]) / 2.0;
+    mad = (vec[n / 2] + vec[(n - 1) / 2]) / static_cast<real>(2.0);
     this->abs_diff_calc(vec, vec, mad, n, is_vectorized, policy);
     mad = find_median(vec, n);
     cv = CV(sum, sum2, n);

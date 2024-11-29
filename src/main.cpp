@@ -55,8 +55,8 @@ int main() {
         real MAD = 0;
 
         std::visit([&](auto &&device) {
-            auto [stat_time, stat_ret] = measure_time([&](std::vector<real> &vec, real &cv, real &mad, bool is_vectorized, const execution_policy &policy) {
-                return device.compute_CV_MAD(vec, cv, mad, is_vectorized, policy);
+            auto [stat_time, stat_ret] = measure_time([&](std::vector<real> &data_vec, real &cv, real &mad, bool is_vectorized, const execution_policy &policy) {
+                return device.compute_CV_MAD(data_vec, cv, mad, is_vectorized, policy);
             }, data_vec, CV, MAD, vec, std::cref(policy));
 
             if (stat_ret == EXIT_SUCCESS) {

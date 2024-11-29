@@ -260,6 +260,8 @@ namespace drawing {
 			}
 
 			virtual void RenderTo(IRenderer& renderer) {
+                // using the renderer parameter to avoid the warning
+                (void)renderer;
 			};
 	};
 

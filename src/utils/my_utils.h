@@ -28,6 +28,7 @@ using real = float;
 #define ANDNOT _mm256_andnot_ps
 #define STRIDE __m256
 #define SET1 _mm256_set1_ps
+#define str_to_real std::strtof
 #else
 using real = double;
 #define LOAD _mm256_loadu_pd
@@ -39,6 +40,7 @@ using real = double;
 #define ANDNOT _mm256_andnot_pd
 #define STRIDE __m256d
 #define SET1 _mm256_set1_pd
+#define str_to_real std::strtod
 #endif
 
 /**

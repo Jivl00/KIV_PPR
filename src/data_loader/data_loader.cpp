@@ -58,13 +58,13 @@ int load_data(const std::string &filename, data &data, const execution_policy &p
 
         // Parse x, y, z
         char* token = strtok_s(nullptr, ",", &saveptr);
-        data.x[i] = std::strtod(token, nullptr); // parse x
+        data.x[i] = str_to_real(token, nullptr); // parse x
 
         token = strtok_s(nullptr, ",", &saveptr);
-        data.y[i] = std::strtod(token, nullptr); // parse y
+        data.y[i] = str_to_real(token, nullptr); // parse y
 
         token = strtok_s(nullptr, ",", &saveptr);
-        data.z[i] = std::strtod(token, nullptr); // parse z
+        data.z[i] = str_to_real(token, nullptr); // parse z
     });
     }, policy.get_policy());
 
