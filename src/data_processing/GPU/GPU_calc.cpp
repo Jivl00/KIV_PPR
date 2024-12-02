@@ -50,23 +50,18 @@ GPU_data_processing::GPU_data_processing() {
 
 }
 
-void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n,
-                                        bool is_vectorized, const execution_policy &policy) {
-    // using unused policy and is_vectorized parameters to avoid warnings
-    (void) policy;
-    (void) is_vectorized;
-
+void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n) {
     // Create buffers
-    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
-    cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(real) * n);
+    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
+//    cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(real) * n);
 
     // Create kernel for abs_diff_calc
     cl::Kernel kernel_abs_diff(program, "abs_diff_calc");
 
     // Set kernel arguments for abs_diff_calc
     kernel_abs_diff.setArg(0, buffer_arr);
-    kernel_abs_diff.setArg(1, buffer_abs_diff);
-    kernel_abs_diff.setArg(2, median);
+//    kernel_abs_diff.setArg(1, buffer_abs_diff);
+    kernel_abs_diff.setArg(1, median);
 
     // Execute kernel for abs_diff_calc
     cl::NDRange global(n);
@@ -74,7 +69,7 @@ void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real
     queue.finish();
 
     // Read results for abs_diff_calc
-    queue.enqueueReadBuffer(buffer_abs_diff, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
+    queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
 }
 
 void GPU_data_processing::sum_vector(std::vector<real> &arr, real &sum, real &sum2, size_t n) {
@@ -141,6 +136,11 @@ void GPU_data_processing::sort_vector(std::vector<real> &arr, size_t n) {
 
 int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &mad, bool is_vectorized,
                                         const execution_policy &policy) {
+    // to avoid warnings
+    (void) is_vectorized;
+    (void) policy;
+
+
     real sum = 0;
     real sum2 = 0;
     size_t n = vec.size();
@@ -168,7 +168,7 @@ int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &
     this->sum_vector(vec, sum, sum2, n);
 
     mad = (vec[n / 2] + vec[(n - 1) / 2]) / static_cast<real>(2.0);
-    this->abs_diff_calc(vec, vec, mad, n, is_vectorized, policy);
+    this->abs_diff_calc(vec, vec, mad, n);
     mad = find_median(vec, n);
     cv = CV(sum, sum2, n);
 

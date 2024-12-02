@@ -66,11 +66,11 @@ real CV(real &sum, real &sum2, size_t n) {
 real MAD(std::vector<real> &arr, size_t n, const bool is_vectorized, const execution_policy &policy) {
 
     real median = (arr[n / 2] + arr[(n - 1) / 2]) / static_cast<real>(2.0);
-    // array of absolute differences from the median - size n
-    std::vector<real> abs_diff_arr(n);
-    abs_diff_calc(arr, abs_diff_arr, median, n, is_vectorized, policy);
 
-    return find_median(abs_diff_arr, n);
+    // compute array of absolute differences from the median
+    abs_diff_calc(arr, arr, median, n, is_vectorized, policy);
+
+    return find_median(arr, n);
 }
 
 int CPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &mad, const bool is_vectorized,

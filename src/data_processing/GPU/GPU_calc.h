@@ -14,9 +14,9 @@
 
 #ifdef _FLOAT
 constexpr auto kernel_source = R"(
-__kernel void abs_diff_calc(__global float *arr, __global float *abs_diff, float median) {
+__kernel void abs_diff_calc(__global float *arr, float median) {
     int i = get_global_id(0);
-    abs_diff[i] = fabs(arr[i] - median);
+    arr[i] = fabs(arr[i] - median);
 }
 
 __kernel void vector_sums(
@@ -101,9 +101,9 @@ __kernel void merge_sort(__global float *arr, __global float *temp, const unsign
 )";
 #else
 constexpr auto kernel_source = R"(
-__kernel void abs_diff_calc(__global double *arr, __global double *abs_diff, double median) {
+__kernel void abs_diff_calc(__global double *arr, double median) {
     int i = get_global_id(0);
-    abs_diff[i] = fabs(arr[i] - median);
+    arr[i] = fabs(arr[i] - median);
 }
 
 __kernel void vector_sums(
@@ -199,8 +199,7 @@ class GPU_data_processing {
 public:
     static cl::Device try_select_first_gpu();
     explicit GPU_data_processing();
-    void abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n,
-                   bool is_vectorized, const execution_policy &policy);
+    void abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n);
     void sum_vector(std::vector<real> &arr, real &sum, real &sum2, size_t n);
     void sort_vector(std::vector<real> &arr, size_t n);
     /**
