@@ -25,6 +25,10 @@ cl::Device GPU_data_processing::try_select_first_gpu() {
     return device;
 }
 
+void GPU_data_processing::set_buffers(std::vector<real> &arr) {
+    buffer_arr = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * arr.size(), arr.data());
+}
+
 GPU_data_processing::GPU_data_processing() {
     cl::Device device = try_select_first_gpu();
 
@@ -50,17 +54,13 @@ GPU_data_processing::GPU_data_processing() {
 
 }
 
-void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n) {
-    // Create buffers
-    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
-//    cl::Buffer buffer_abs_diff(context, CL_MEM_WRITE_ONLY, sizeof(real) * n);
+void GPU_data_processing::abs_diff_calc(std::vector<real> &abs_diff, real median, size_t n) {
 
     // Create kernel for abs_diff_calc
     cl::Kernel kernel_abs_diff(program, "abs_diff_calc");
 
     // Set kernel arguments for abs_diff_calc
     kernel_abs_diff.setArg(0, buffer_arr);
-//    kernel_abs_diff.setArg(1, buffer_abs_diff);
     kernel_abs_diff.setArg(1, median);
 
     // Execute kernel for abs_diff_calc
@@ -72,13 +72,12 @@ void GPU_data_processing::abs_diff_calc(std::vector<real> &arr, std::vector<real
     queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
 }
 
-void GPU_data_processing::sum_vector(std::vector<real> &arr, real &sum, real &sum2, size_t n) {
+void GPU_data_processing::sum_vector(real &sum, real &sum2, size_t n) {
     const size_t workgroup_size = 256; // Choose a workgroup size
     const size_t global_size = ((n + workgroup_size - 1) / workgroup_size) * workgroup_size;
     const size_t num_workgroups = global_size / workgroup_size;
 
     // Create buffers
-    cl::Buffer buffer_arr(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
     cl::Buffer buffer_partial_sums(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
     cl::Buffer buffer_partial_sums_squares(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
 
@@ -111,11 +110,8 @@ void GPU_data_processing::sum_vector(std::vector<real> &arr, real &sum, real &su
 
 
 void GPU_data_processing::sort_vector(std::vector<real> &arr, size_t n) {
-    // Temporary buffer for merging
-    std::vector<real> temp(n);
 
-    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, arr.data());
-    cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, temp.data());
+    cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE, sizeof(real) * n);
 
     cl::Kernel kernel_merge_sort(program, "merge_sort");
 
@@ -144,6 +140,7 @@ int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &
     real sum = 0;
     real sum2 = 0;
     size_t n = vec.size();
+
     // sort the data
 
 //    auto [sort_time, sort_ret] = measure_time(mergeSort, vec, sum, sum2, is_vectorized, policy);
@@ -163,12 +160,14 @@ int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &
 //        return EXIT_FAILURE;
 //    }
 
+    // Create buffers
+    set_buffers(vec);
     this->sort_vector(vec, n);
     std::cout << (std::is_sorted(vec.begin(), vec.end())? "Sorted" : "Not sorted") << std::endl;
-    this->sum_vector(vec, sum, sum2, n);
+    this->sum_vector(sum, sum2, n);
 
     mad = (vec[n / 2] + vec[(n - 1) / 2]) / static_cast<real>(2.0);
-    this->abs_diff_calc(vec, vec, mad, n);
+    this->abs_diff_calc(vec, mad, n);
     mad = find_median(vec, n);
     cv = CV(sum, sum2, n);
 

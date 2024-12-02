@@ -198,9 +198,10 @@ __kernel void merge_sort(__global double *arr, __global double *temp, const unsi
 class GPU_data_processing {
 public:
     static cl::Device try_select_first_gpu();
+    void set_buffers(std::vector<real> &arr);
     explicit GPU_data_processing();
-    void abs_diff_calc(std::vector<real> &arr, std::vector<real> &abs_diff, real median, size_t n);
-    void sum_vector(std::vector<real> &arr, real &sum, real &sum2, size_t n);
+    void abs_diff_calc(std::vector<real> &abs_diff, real median, size_t n);
+    void sum_vector(real &sum, real &sum2, size_t n);
     void sort_vector(std::vector<real> &arr, size_t n);
     /**
      * @brief Compute the coefficient of variance and median absolute deviation
@@ -218,4 +219,5 @@ private:
     cl::Context context;
     cl::CommandQueue queue;
     cl::Program program;
+    cl::Buffer buffer_arr;
 };
