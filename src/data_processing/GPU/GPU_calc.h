@@ -12,6 +12,10 @@
 #pragma comment(lib, "opencl.lib")
 #endif
 
+#define WORK_GROUP_SIZE 256
+#undef max
+#include <limits>
+
 #ifdef _FLOAT
 constexpr auto kernel_source = R"(
 __kernel void abs_diff_calc(__global float *arr, float median) {
@@ -119,14 +123,9 @@ __kernel void vector_sums(
     uint group_id = get_group_id(0);
 
     // Initialize local memory
-    if (global_id < get_global_size(0)) {
-        double value = input[global_id];
-        local_sums[local_id] = value;
-        local_sums_squares[local_id] = value * value;
-    } else {
-        local_sums[local_id] = 0.0; // Handle out-of-bound threads
-        local_sums_squares[local_id] = 0.0;
-    }
+    double value = (global_id < get_global_size(0)) ? input[global_id] : 0.0;
+    local_sums[local_id] = value;
+    local_sums_squares[local_id] = value * value;
 
     // Synchronize to ensure all work-items have written to local memory
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -185,6 +184,37 @@ __kernel void merge_sort(__global double *arr, __global double *temp, const unsi
         arr[i] = temp[i];
     }
 }
+
+__kernel void bitonic_sort_kernel(__global double *arr, const uint stage, const uint pass_of_stage) {
+    uint thread_id = get_global_id(0);
+    uint pair_distance = 1 << (stage - pass_of_stage); // distance between elements to compare
+    uint block_width = 2 * pair_distance; // width of the block being compared
+    uint temp;
+    bool compare_result;
+    uint left_id = (thread_id & (pair_distance - 1)) + (thread_id >> (stage - pass_of_stage)) * block_width;
+    uint right_id = left_id + pair_distance;
+
+    // get the elements to compare
+    double left_element = arr[left_id];
+    double right_element = arr[right_id];
+
+    uint same_direction_block_width = thread_id >> stage;
+    uint same_direction = same_direction_block_width & 0x1; // check if the block is in the same direction
+
+    // swap the elements if they are not in the same direction
+    temp = same_direction ? right_id : temp;
+    right_id = same_direction ? left_id : right_id;
+    left_id = same_direction ? temp : left_id;
+
+    compare_result = (left_element < right_element);
+
+    // swap the elements if they are not in the correct order
+    double greater = compare_result ? right_element : left_element;
+    double lesser = compare_result ? left_element : right_element;
+
+    arr[left_id] = lesser;
+    arr[right_id] = greater;
+}
 )";
 #endif
 
@@ -202,7 +232,8 @@ public:
     explicit GPU_data_processing();
     void abs_diff_calc(std::vector<real> &abs_diff, real median, size_t n);
     void sum_vector(real &sum, real &sum2, size_t n);
-    void sort_vector(std::vector<real> &arr, size_t n);
+    void merge_sort(std::vector<real> &arr, size_t n);
+    void bitonic_sort(std::vector<real> &arr, size_t n);
     /**
      * @brief Compute the coefficient of variance and median absolute deviation
      * @param vec - vector of reals
@@ -219,5 +250,6 @@ private:
     cl::Context context;
     cl::CommandQueue queue;
     cl::Program program;
-    cl::Buffer buffer_arr;
+    cl::Buffer padded_buffer_arr;
+    size_t padded_size;
 };

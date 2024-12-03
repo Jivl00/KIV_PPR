@@ -288,5 +288,153 @@ int main(int argc, char *argv[]) {
 }
 
 
+// Define missing identifiers
+//#define DATA_SIZE 1<<24
+#define WORK_GROUP_SIZE 256
+#define real double
+
+cl::Device try_select_first_gpu() {
+    std::vector<cl::Platform> platforms;
+    cl::Platform::get(&platforms);
+
+    for (auto &platform: platforms) {
+        std::vector<cl::Device> devices;
+        platform.getDevices(CL_DEVICE_TYPE_GPU, &devices);
+
+        if (!devices.empty()) {
+            auto &device = devices.front();
+            auto desc = device.getInfo<CL_DEVICE_NAME>();
+            std::cout << "Selected device " << desc << " on platform " << platform.getInfo<CL_PLATFORM_NAME>()
+                      << std::endl;
+            return device;
+        }
+    }
+
+    cl::Platform platform = cl::Platform::getDefault();
+    cl::Device device = cl::Device::getDefault();
+    auto desc = device.getInfo<CL_DEVICE_NAME>();
+    std::cout << "Selected default device " << desc << " on platform " << platform.getInfo<CL_PLATFORM_NAME>()
+              << std::endl;
+    return device;
+}
+#include <random>
+#undef max
+#include <limits>
+int main2() {
+    // Basic initialization and declaration...
+    cl::Device device = try_select_first_gpu();
+    cl::Context context = cl::Context{device};
+    cl::CommandQueue command_queue = cl::CommandQueue{context, device};
+
+// Allocate memory and initialize the input buffer with random values
+    size_t DATA_SIZE = 1<<5;
+    std::vector<real> pInputBuffer(DATA_SIZE);
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<real> dis(0.0, 1000.0);
+
+    for (int i = 0; i < DATA_SIZE; i++) {
+        pInputBuffer[i] = dis(gen);
+    }
+
+//    auto policy = execution_policy(execution_policy::e_type::Parallel);
+//    auto DATA_FILE = "data/ACC_001.csv";
+//        struct data data;
+//        auto [load_time, load_ret] = measure_time([&](const std::string& filename, struct data& data, const execution_policy& policy) {
+//            return load_data(filename, data, policy);
+//        }, DATA_FILE, data, std::cref(policy));
+//
+    auto start = std::chrono::high_resolution_clock::now();
+//    // Pad the input buffer to the nearest power of 2
+//    size_t power = 1;
+//    size_t original_size = data.x.size();
+//    while (power < data.x.size()) {
+//        power <<= 1;
+//    }
+//    data.x.resize(power, std::numeric_limits<double>::max());
+//    size_t DATA_SIZE = power;
+//    std::vector<real> pInputBuffer(DATA_SIZE);
+//    std::copy(data.x.begin(), data.x.end(), pInputBuffer.begin());
+
+    // Create memory buffers on the device for each vector
+    cl::Buffer pInputBuffer_clmem(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(real) * DATA_SIZE, pInputBuffer.data());
+
+    // Create and build the program
+    std::string kernel_source = R"(
+    __kernel void bitonic_sort_kernel(__global double *input_ptr, const uint stage, const uint passOfStage) {
+        uint threadId = get_global_id(0);
+        uint pairDistance = 1 << (stage - passOfStage);
+        uint blockWidth = 2 * pairDistance;
+        uint temp;
+        bool compareResult;
+        uint leftId = (threadId & (pairDistance - 1)) + (threadId >> (stage - passOfStage)) * blockWidth;
+        uint rightId = leftId + pairDistance;
+
+        double leftElement, rightElement;
+        double greater, lesser;
+        leftElement = input_ptr[leftId];
+        rightElement = input_ptr[rightId];
+
+        uint sameDirectionBlockWidth = threadId >> stage;
+        uint sameDirection = sameDirectionBlockWidth & 0x1;
+
+        temp = sameDirection ? rightId : temp;
+        rightId = sameDirection ? leftId : rightId;
+        leftId = sameDirection ? temp : leftId;
+
+        compareResult = (leftElement < rightElement);
+
+        greater = compareResult ? rightElement : leftElement;
+        lesser = compareResult ? leftElement : rightElement;
+
+        input_ptr[leftId] = lesser;
+        input_ptr[rightId] = greater;
+    }
+    )";
+
+    cl::Program program(context, kernel_source);
+    program.build({device});
+
+    // Create the kernel
+    cl::Kernel bitonic_sort_kernel(program, "bitonic_sort_kernel");
+
+    bitonic_sort_kernel.setArg(0, pInputBuffer_clmem);
+
+    unsigned int stage, passOfStage, numStages, temp;
+    stage = passOfStage = numStages = 0;
+    for (temp = DATA_SIZE; temp > 1; temp >>= 1)
+        ++numStages;
+    size_t local_size = WORK_GROUP_SIZE;
+    size_t global_size = ((DATA_SIZE >> 1) + local_size - 1) / local_size * local_size;
+
+    for (stage = 0; stage < numStages; ++stage) {
+        // stage of the algorithm
+        bitonic_sort_kernel.setArg(1, stage);
+        // Every stage has stage + 1 passes
+        for (passOfStage = 0; passOfStage < stage + 1; ++passOfStage) {
+            // pass of the current stage
+            bitonic_sort_kernel.setArg(2, passOfStage);
+
+            // Enqueue a kernel run call
+            command_queue.enqueueNDRangeKernel(bitonic_sort_kernel, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
+            command_queue.finish();
+        }
+    }
+
+    // Read the sorted data back to the host
+    command_queue.enqueueReadBuffer(pInputBuffer_clmem, CL_TRUE, 0, sizeof(real) * DATA_SIZE, pInputBuffer.data());
+
+//     Trim to the original size
+//    pInputBuffer.resize(original_size);
+
+    // Print if the sorted data
+    std::cout << "Sorted data: " << (std::is_sorted(pInputBuffer.begin(), pInputBuffer.end()) ? "Correct" : "Incorrect") << std::endl;
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> duration = end - start;
+    std::cout << "Time taken: " << duration.count() << " seconds" << std::endl;
 
 
+//    auto mad = MAD(pInputBuffer, pInputBuffer.size(), false, policy);
+//    std::cout << "MAD: " << mad << std::endl;
+    return 0;
+}

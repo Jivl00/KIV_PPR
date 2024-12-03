@@ -26,7 +26,17 @@ cl::Device GPU_data_processing::try_select_first_gpu() {
 }
 
 void GPU_data_processing::set_buffers(std::vector<real> &arr) {
-    buffer_arr = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * arr.size(), arr.data());
+    size_t n = arr.size();
+    // pad the input to the nearest power of 2
+    size_t power = 1;
+    while (power < n) {
+        power <<= 1;
+    }
+    arr.resize(power, std::numeric_limits<double>::max());
+    padded_size = power;
+
+    padded_buffer_arr =cl::Buffer(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(real) * power, arr.data());
+
 }
 
 GPU_data_processing::GPU_data_processing() {
@@ -59,8 +69,13 @@ void GPU_data_processing::abs_diff_calc(std::vector<real> &abs_diff, real median
     // Create kernel for abs_diff_calc
     cl::Kernel kernel_abs_diff(program, "abs_diff_calc");
 
+    cl_buffer_region region = {0, sizeof(real) * n};
+//    cl::Buffer sub_buffer = cl::Buffer(context, CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, sizeof(real) * n, abs_diff.data());
+    cl::Buffer sub_buffer = padded_buffer_arr.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &region);
+
+
     // Set kernel arguments for abs_diff_calc
-    kernel_abs_diff.setArg(0, buffer_arr);
+    kernel_abs_diff.setArg(0, sub_buffer);
     kernel_abs_diff.setArg(1, median);
 
     // Execute kernel for abs_diff_calc
@@ -69,31 +84,32 @@ void GPU_data_processing::abs_diff_calc(std::vector<real> &abs_diff, real median
     queue.finish();
 
     // Read results for abs_diff_calc
-    queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
+    queue.enqueueReadBuffer(sub_buffer, CL_TRUE, 0, sizeof(real) * n, abs_diff.data());
 }
 
 void GPU_data_processing::sum_vector(real &sum, real &sum2, size_t n) {
-    const size_t workgroup_size = 256; // Choose a workgroup size
-    const size_t global_size = ((n + workgroup_size - 1) / workgroup_size) * workgroup_size;
-    const size_t num_workgroups = global_size / workgroup_size;
+    const size_t global_size = ((n + WORK_GROUP_SIZE - 1) / WORK_GROUP_SIZE) * WORK_GROUP_SIZE;
+    const size_t num_workgroups = global_size / WORK_GROUP_SIZE;
 
     // Create buffers
     cl::Buffer buffer_partial_sums(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
     cl::Buffer buffer_partial_sums_squares(context, CL_MEM_WRITE_ONLY, sizeof(real) * num_workgroups);
+    cl_buffer_region region = {0, sizeof(real) * n};
+    cl::Buffer sub_buffer = padded_buffer_arr.createSubBuffer(CL_MEM_READ_ONLY, CL_BUFFER_CREATE_TYPE_REGION, &region);
 
     // Create kernel for vector_sum
     cl::Kernel kernel_vector_sum(program, "vector_sums");
 
     // Set kernel arguments for vector_sum
-    kernel_vector_sum.setArg(0, buffer_arr);
+    kernel_vector_sum.setArg(0, sub_buffer);
     kernel_vector_sum.setArg(1, buffer_partial_sums);
     kernel_vector_sum.setArg(2, buffer_partial_sums_squares);
-    kernel_vector_sum.setArg(3, cl::Local(sizeof(real) * workgroup_size));
-    kernel_vector_sum.setArg(4, cl::Local(sizeof(real) * workgroup_size));
+    kernel_vector_sum.setArg(3, cl::Local(sizeof(real) * WORK_GROUP_SIZE));
+    kernel_vector_sum.setArg(4, cl::Local(sizeof(real) * WORK_GROUP_SIZE));
 
     // Execute kernel for vector_sum
     cl::NDRange global(global_size);
-    cl::NDRange local(workgroup_size);
+    cl::NDRange local(WORK_GROUP_SIZE);
     queue.enqueueNDRangeKernel(kernel_vector_sum, cl::NullRange, global, local);
     queue.finish();
 
@@ -109,8 +125,9 @@ void GPU_data_processing::sum_vector(real &sum, real &sum2, size_t n) {
 }
 
 
-void GPU_data_processing::sort_vector(std::vector<real> &arr, size_t n) {
+void GPU_data_processing::merge_sort(std::vector<real> &arr, size_t n) {
 
+    cl::Buffer buffer_arr(context, CL_MEM_READ_WRITE | CL_MEM_USE_HOST_PTR, sizeof(real) * n, arr.data());
     cl::Buffer buffer_temp(context, CL_MEM_READ_WRITE, sizeof(real) * n);
 
     cl::Kernel kernel_merge_sort(program, "merge_sort");
@@ -128,6 +145,36 @@ void GPU_data_processing::sort_vector(std::vector<real> &arr, size_t n) {
 
     // Read the sorted array
     queue.enqueueReadBuffer(buffer_arr, CL_TRUE, 0, sizeof(real) * n, arr.data());
+}
+
+void GPU_data_processing::bitonic_sort(std::vector<real> &arr, size_t n) {
+    // create the kernel
+    cl::Kernel bitonic_sort_kernel(program, "bitonic_sort_kernel");
+    bitonic_sort_kernel.setArg(0, padded_buffer_arr);
+
+    // calculate the number of stages
+    unsigned int num_stages = 0;
+    for (size_t i = padded_size; i > 1; i >>= 1)
+        ++num_stages;
+
+    size_t local_size = WORK_GROUP_SIZE;
+    size_t global_size = ((padded_size >> 1) + local_size - 1) / local_size * local_size;
+
+    // execute the bitonic sort kernel
+    for (unsigned int stage = 0; stage < num_stages; ++stage) { // for each stage
+        bitonic_sort_kernel.setArg(1, stage);
+        for (unsigned int pass_of_stage = 0; pass_of_stage <= stage; ++pass_of_stage) { // for each pass of the stage
+            bitonic_sort_kernel.setArg(2, pass_of_stage);
+            queue.enqueueNDRangeKernel(bitonic_sort_kernel, cl::NullRange, cl::NDRange(global_size), cl::NDRange(local_size));
+            queue.finish();
+        }
+    }
+
+    // read the sorted data back to the host
+    queue.enqueueReadBuffer(padded_buffer_arr, CL_TRUE, 0, sizeof(real) * padded_size, arr.data());
+
+    // remove the padding - padding is at the end of the array
+    arr.resize(n);
 }
 
 int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &mad, bool is_vectorized,
@@ -161,13 +208,17 @@ int GPU_data_processing::compute_CV_MAD(std::vector<real> &vec, real &cv, real &
 //    }
 
     // Create buffers
+    auto vec_deep_copy = std::vector<real>(vec.begin(), vec.end());
     set_buffers(vec);
-    this->sort_vector(vec, n);
-    std::cout << (std::is_sorted(vec.begin(), vec.end())? "Sorted" : "Not sorted") << std::endl;
+//    this->merge_sort(vec, n);
+    std::sort(vec_deep_copy.begin(), vec_deep_copy.end());
     this->sum_vector(sum, sum2, n);
+    this->bitonic_sort(vec, n);
+    std::cout << "Vectors are equal: " << (vec == vec_deep_copy) << std::endl;
+    std::cout << (std::is_sorted(vec.begin(), vec.end())? "Sorted" : "Not sorted") << std::endl;
 
     mad = (vec[n / 2] + vec[(n - 1) / 2]) / static_cast<real>(2.0);
-    this->abs_diff_calc(vec, mad, n);
+    abs_diff_calc(vec, mad, n);
     mad = find_median(vec, n);
     cv = CV(sum, sum2, n);
 
