@@ -8,6 +8,7 @@
 #include "data_loader.h"
 #include "execution_policy.h"
 #include "device_type.h"
+#include "svg_ploter.h"
 #include "my_utils.h"
 
 arg_parser set_args(const char *program_name) {
@@ -112,7 +113,7 @@ double do_comp(std::vector<real> &data_vec, real &CV, real &MAD, bool vec, const
 }
 
 
-int main2(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
     arg_parser parser = set_args(argv[0]);
 
     try {
@@ -232,6 +233,11 @@ int main2(int argc, char *argv[]) {
                 }
             }
             results_file.close();
+            // if all variants are run, plot the results
+            if (all_variants) {
+                std::string out_dir = output + "/" + std::filesystem::path(file).stem().string();
+                plot_results(out_file, out_dir);
+            }
         }
 
     } catch (const std::exception &e) {

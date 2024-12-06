@@ -16,6 +16,7 @@ include_directories(src
         src/data_processing/GPU/
         src/statistics/cpu
         src/statistics/gpu
+        src/svg_ploter
         lib
         lib/drawing)
 

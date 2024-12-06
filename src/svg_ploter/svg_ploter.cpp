@@ -283,8 +283,3 @@ void plot_results(const std::string& filename, const std::string& output_folder)
         }
     }
 }
-
-int main() {
-    plot_results("results/ACC_001_results.csv", "test/");
-    return 0;
-}
