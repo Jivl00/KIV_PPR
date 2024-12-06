@@ -10,7 +10,7 @@
 #include "device_type.h"
 #include "my_utils.h"
 
-arg_parser set_args() {
+arg_parser set_args(const char *program_name) {
     arg_parser parser;
     parser.add_argument("--help", "Show help message", false, false);
     parser.add_argument("--input", "Path to input file or directory with data in .csv format", true, true);
@@ -33,7 +33,8 @@ arg_parser set_args() {
     group2.add_argument("--all_variants");
 
 
-    parser.set_usage("Example usage: ./main --input data/ACC_001.csv --repetitions 10 --num_partitions 4 --gpu");
+    parser.set_usage("Example usage: " + std::string(program_name) +
+                     " --input data/ACC_001.csv --repetitions 10 --num_partitions 4 --gpu");
     return parser;
 }
 
@@ -82,7 +83,8 @@ size_t check_numeric(const std::string &value, const std::string &name) {
     return std::stoul(value);
 }
 
-double do_comp(std::vector<real> &data_vec, real &CV, real &MAD, bool vec, const execution_policy &policy, const device_type &device, size_t repetitions) {
+double do_comp(std::vector<real> &data_vec, real &CV, real &MAD, bool vec, const execution_policy &policy,
+               const device_type &device, size_t repetitions) {
     std::vector<real> times;
     for (size_t i = 0; i < repetitions; ++i) {
         auto data_vec_copy = std::vector<real>(data_vec);
@@ -110,21 +112,21 @@ double do_comp(std::vector<real> &data_vec, real &CV, real &MAD, bool vec, const
 }
 
 
-int main(int argc, char *argv[]) {
-    arg_parser parser = set_args();
+int main2(int argc, char *argv[]) {
+    arg_parser parser = set_args(argv[0]);
 
     try {
         parser.parse_args(argc, argv);
-        const std::string &input = parser.arguments.at("--input").value;
+        const std::string &input = parser.get("--input");
         auto files = check_input(input);
-        const std::string &output = parser.arguments.at("--output").value;
+        const std::string &output = parser.get("--output");
         check_output(output);
-        const size_t repetitions = check_numeric(parser.arguments.at("--repetitions").value, "--repetitions");
-        size_t num_partitions = check_numeric(parser.arguments.at("--num_partitions").value, "--num_partitions");
-        bool gpu = parser.arguments.at("--gpu").value == "true";
-        bool par = parser.arguments.at("--parallel").value == "true";
-        bool vec = parser.arguments.at("--vectorized").value == "true";
-        bool all_variants = parser.arguments.at("--all_variants").value == "true";
+        const size_t repetitions = check_numeric(parser.get("--repetitions"), "--repetitions");
+        size_t num_partitions = check_numeric(parser.get("--num_partitions"), "--num_partitions");
+        bool gpu = parser.get("--gpu") == "true";
+        bool par = parser.get("--parallel") == "true";
+        bool vec = parser.get("--vectorized") == "true";
+        bool all_variants = parser.get("--all_variants") == "true";
 
 
         std::cout << "Running computations on " << files.size() << " files"
@@ -191,11 +193,18 @@ int main(int argc, char *argv[]) {
                             for (auto vectorized: vectorizations) {
                                 real CV = 0;
                                 real MAD = 0;
-                                std::cout << "Running on CPU in " << (ex_policy == execution_policy::e_type::Parallel ? "parallel" : "sequential")
-                                          << " with " << (vectorized ? "vectorization" : "no vectorization") << std::endl;
-                                auto med_time = do_comp(data_vec, CV, MAD, vectorized, execution_policy(ex_policy), device, repetitions);
-                                results_file << name << "," << n << ",CPU_" << (ex_policy == execution_policy::e_type::Parallel ? "parallel" : "sequential") << "_"
-                                             << (vectorized ? "vectorized" : "no_vectorized") << "," << CV << "," << MAD << "," << med_time << "\n";
+                                std::cout << "Running on CPU in "
+                                          << (ex_policy == execution_policy::e_type::Parallel ? "parallel"
+                                                                                              : "sequential")
+                                          << " with " << (vectorized ? "vectorization" : "no vectorization")
+                                          << std::endl;
+                                auto med_time = do_comp(data_vec, CV, MAD, vectorized, execution_policy(ex_policy),
+                                                        device, repetitions);
+                                results_file << name << "," << n << ",CPU_"
+                                             << (ex_policy == execution_policy::e_type::Parallel ? "parallel"
+                                                                                                 : "sequential") << "_"
+                                             << (vectorized ? "vectorized" : "no_vectorized") << "," << CV << "," << MAD
+                                             << "," << med_time << "\n";
                             }
                         }
                         //gpu
@@ -210,12 +219,15 @@ int main(int argc, char *argv[]) {
                         real MAD = 0;
                         device_type device(gpu ? device_type::d_type::GPU : device_type::d_type::CPU);
                         std::cout << "Running on " << (gpu ? "GPU" : "CPU") << std::endl;
-                        if (!gpu){
-                            std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with " << (vec ? "vectorization" : "no vectorization") << std::endl;
+                        if (!gpu) {
+                            std::cout << "Running in " << (par ? "parallel" : "sequential") << " mode with "
+                                      << (vec ? "vectorization" : "no vectorization") << std::endl;
                         }
                         auto med_time = do_comp(data_vec, CV, MAD, vec, policy, device, repetitions);
-                        std::string comp_type = gpu ? "GPU" : "CPU_" + std::string(par ? "parallel" : "sequential") + "_" + std::string(vec ? "vectorized" : "no_vectorized");
-                        results_file << name << "," << n << "," << comp_type << "," << CV << "," << MAD << "," << med_time << "\n";
+                        std::string comp_type = gpu ? "GPU" : "CPU_" + std::string(par ? "parallel" : "sequential") +
+                                                              "_" + std::string(vec ? "vectorized" : "no_vectorized");
+                        results_file << name << "," << n << "," << comp_type << "," << CV << "," << MAD << ","
+                                     << med_time << "\n";
                     }
                 }
             }
