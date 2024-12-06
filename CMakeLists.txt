@@ -4,8 +4,8 @@ cmake_minimum_required(VERSION 3.21)
 project(SP)
 
 set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /openmp /arch:AVX2 /D_FLOAT")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /openmp /arch:AVX2")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /arch:AVX2 /D_FLOAT")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4 /arch:AVX2")
 find_package(OpenCL REQUIRED)
 
 include_directories(src
