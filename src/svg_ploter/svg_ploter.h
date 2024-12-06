@@ -75,4 +75,13 @@ struct data_point {
 void load_results(const std::string &filename,
                   std::unordered_map<std::string, std::unordered_map<std::string, std::vector<data_point>>> &data);
 
-
+/**
+ * Function to plot results from a csv file using the SVGRenderer (9 graphs total)
+ * Plots:
+ * 1. Time vs Number of Elements - for all variants and columns (3 graphs)
+ * 2. Coefficient of Variation vs Number of Elements - for all variants and columns (3 graphs)
+ * 3. Median Absolute Deviation vs Number of Elements - for all variants and columns (3 graphs)
+ * @param filename - filename to load results from
+ * @param output_folder - output folder to save the graphs to
+ */
+void plot_results(const std::string& filename, const std::string& output_folder);

@@ -30,30 +30,30 @@ void plot_graph(
         const double canvas_width ,
         const double canvas_height
 ) {
-    // Ensure input points are valid
+    // ensure input points are valid
     if (x_points_all.size() != y_points_all.size() || x_points_all.empty()) {
         throw std::invalid_argument("Each set of x_points and y_points must be of the same size and not empty.");
     }
 
-    // Prepare the SVG output
+    // prepare the SVG output
     std::string svg_output;
 
-    // Create the SVG Renderer
+    // create the SVG Renderer
     CSVG_Renderer svg_renderer(canvas_width, canvas_height, svg_output);
 
-    // Create the drawing object
+    // create the drawing object
     drawing::Drawing drawing;
 
-    // Get the root group
+    // get the root group
     drawing::Group &root = drawing.Root();
 
-    // Define margins for the plot area
+    // define margins for the plot area
     const double margin_left = 100;
     const double margin_bottom = 100;
     const double plot_width = canvas_width - margin_left - 50;
     const double plot_height = canvas_height - margin_bottom - 50;
 
-    // Calculate axis ranges based on all the points
+    // calculate axis ranges based on all the points
     double x_min = std::numeric_limits<double>::infinity();
     double x_max = -std::numeric_limits<double>::infinity();
     double y_min = std::numeric_limits<double>::infinity();
@@ -66,11 +66,11 @@ void plot_graph(
         y_max = std::max(y_max, *std::max_element(y_points_all[i].begin(), y_points_all[i].end()));
     }
 
-    // Round the axis min/max values for neatness
+    // round the axis min/max values for neatness
     const double x_range = round_to_nearest(x_max - x_min, 1);
     const double y_range = round_to_nearest(y_max - y_min, 1);
 
-    // Adjust the axis limits to ensure room for labels
+    // adjust the axis limits to ensure room for labels
     const double x_axis_padding = x_range * 0.1;
     const double y_axis_padding = y_range * 0.1;
     const double x_adjusted_min = x_min - x_axis_padding;
@@ -78,7 +78,7 @@ void plot_graph(
     const double y_adjusted_min = y_min - y_axis_padding;
     const double y_adjusted_max = y_max + y_axis_padding;
 
-    // Add axes
+    // add axes
     auto &x_axis = root.Add<drawing::Line>(margin_left, canvas_height - margin_bottom, canvas_width - 50,
                                            canvas_height - margin_bottom);
     x_axis.Set_Stroke_Color(RGBColor::From_HTML_Color("#000000")).Set_Stroke_Width(2.0);
@@ -86,23 +86,23 @@ void plot_graph(
     auto &y_axis = root.Add<drawing::Line>(margin_left, canvas_height - margin_bottom, margin_left, 50);
     y_axis.Set_Stroke_Color(RGBColor::From_HTML_Color("#000000")).Set_Stroke_Width(2.0);
 
-    // Add grid and ticks
+    // add grid and ticks
     const int num_ticks = 10;
     for (int i = 0; i <= num_ticks; ++i) {
-        // Grid lines and ticks for X axis
+        // grid lines and ticks for X axis
         double x_pos = margin_left + i * (plot_width / num_ticks);
         double x_value = x_adjusted_min + i * ((x_adjusted_max - x_adjusted_min) / num_ticks);
 
-        // Add grid line
+        // add grid line
         auto &x_grid = root.Add<drawing::Line>(x_pos, 50, x_pos, canvas_height - margin_bottom);
         x_grid.Set_Stroke_Color(RGBColor::From_HTML_Color("#CCCCCC")).Set_Stroke_Width(1.0);
 
-        // Add tick
+        // add tick
         auto &x_tick = root.Add<drawing::Line>(x_pos, canvas_height - margin_bottom, x_pos,
                                                canvas_height - margin_bottom + 10);
         x_tick.Set_Stroke_Color(RGBColor::From_HTML_Color("#000000")).Set_Stroke_Width(2.0);
 
-        // Add label
+        // add label
         auto &x_label_text = root.Add<drawing::Text>(x_pos, canvas_height - margin_bottom + 25,
                                                      format_tick_label(x_value));
         x_label_text.Set_Font_Size(12).Set_Anchor(drawing::Text::TextAnchor::MIDDLE);
@@ -111,39 +111,39 @@ void plot_graph(
     }
 
     for (int i = 0; i <= num_ticks; ++i) {
-        // Grid lines and ticks for Y axis
+        // grid lines and ticks for Y axis
         double y_pos = canvas_height - margin_bottom - i * (plot_height / num_ticks);
         double y_value = y_adjusted_min + i * ((y_adjusted_max - y_adjusted_min) / num_ticks);
 
-        // Add grid line
+        // add grid line
         auto &y_grid = root.Add<drawing::Line>(margin_left, y_pos, canvas_width - 50, y_pos);
         y_grid.Set_Stroke_Color(RGBColor::From_HTML_Color("#CCCCCC")).Set_Stroke_Width(1.0);
 
-        // Add tick
+        // add tick
         auto &y_tick = root.Add<drawing::Line>(margin_left - 10, y_pos, margin_left, y_pos);
         y_tick.Set_Stroke_Color(RGBColor::From_HTML_Color("#000000")).Set_Stroke_Width(2.0);
 
-        // Add label
+        // add label
         auto &y_label_text = root.Add<drawing::Text>(margin_left - 20, y_pos, format_tick_label(y_value));
         y_label_text.Set_Font_Size(12).Set_Anchor(drawing::Text::TextAnchor::END);
     }
 
-    // Colors for each line
+    // colors for each line
     std::vector<std::string> line_colors = {"#FF0000", "#0000FF", "#00FF00", "#FF00FF", "#00FFFF", "#FFFF00"};
     size_t color_index = 0;
 
-    // Plot each data series
+    // plot each data series
     for (size_t i = 0; i < x_points_all.size(); ++i) {
-        // Initialize the first point for the polyline
+        // initialize the first point for the polyline
         double x_first =
                 margin_left + ((x_points_all[i][0] - x_adjusted_min) / (x_adjusted_max - x_adjusted_min)) * plot_width;
         double y_first = canvas_height - margin_bottom -
                          ((y_points_all[i][0] - y_adjusted_min) / (y_adjusted_max - y_adjusted_min)) * plot_height;
 
-        // Create polyline and add the first point
+        // create polyline and add the first point
         auto &polyline = root.Add<drawing::PolyLine>(x_first, y_first);
 
-        // Iterate from the second point onwards
+        // iterate from the second point onwards
         for (size_t j = 1; j < x_points_all[i].size(); ++j) {
             double x = margin_left +
                        ((x_points_all[i][j] - x_adjusted_min) / (x_adjusted_max - x_adjusted_min)) * plot_width;
@@ -152,15 +152,15 @@ void plot_graph(
             polyline.Add_Point(x, y);
         }
 
-        // Set the polyline properties: transparent fill and semi-transparent stroke
+        // set the polyline properties: transparent fill and semi-transparent stroke
         polyline.Set_Stroke_Color(RGBColor::From_HTML_Color(line_colors[color_index % line_colors.size()]))
                 .Set_Stroke_Width(2.0).Set_Fill_Color(RGBColor::From_HTML_Color("#000000"))
-                .Set_Fill_Opacity(0).Set_Stroke_Opacity(0.5); // Set alpha to 0.5 for semi-transparent lines
+                .Set_Fill_Opacity(0).Set_Stroke_Opacity(0.5); // set alpha to 0.5 for semi-transparent lines
 
         color_index++;
     }
 
-    // Add axis labels
+    // add axis labels
     auto &x_axis_label = root.Add<drawing::Text>(canvas_width / 2, canvas_height - margin_bottom + 50, x_label);
     x_axis_label.Set_Font_Size(16).Set_Anchor(drawing::Text::TextAnchor::MIDDLE);
 
@@ -168,27 +168,27 @@ void plot_graph(
     y_axis_label.Set_Font_Size(16).Set_Anchor(drawing::Text::TextAnchor::MIDDLE)
             .Set_Transform("rotate(-90, 50, " + std::to_string(canvas_height / 2) + ")");
 
-    // Add title
+    // add title
     auto &graph_title = root.Add<drawing::Text>(canvas_width / 2, 30, title);
     graph_title.Set_Font_Size(20).Set_Anchor(drawing::Text::TextAnchor::MIDDLE);
 
-    // Add legend for each line
+    // add legend for each line
     double legend_x = canvas_width - 50;
     double legend_y = 60;
     for (size_t i = 0; i < line_labels.size(); ++i) {
-        auto &legend_line = root.Add<drawing::Line>(legend_x, legend_y + i * 20, legend_x + 20, legend_y + i * 20);
+        auto &legend_line = root.Add<drawing::Line>(legend_x, legend_y + static_cast<double>(i) * 20, legend_x + 20, legend_y + static_cast<double>(i) * 20);
         legend_line.Set_Stroke_Color(RGBColor::From_HTML_Color(line_colors[i % line_colors.size()]))
                 .Set_Stroke_Width(2.0);
-        auto &legend_text = root.Add<drawing::Text>(legend_x + 30, legend_y + i * 20, line_labels[i]);
+        auto &legend_text = root.Add<drawing::Text>(legend_x + 30, legend_y + static_cast<double>(i) * 20, line_labels[i]);
         legend_text.Set_Font_Size(12).Set_Anchor(drawing::Text::TextAnchor::START);
     }
 
-    // Render the SVG
+    // render the SVG
     svg_renderer.Begin_Render();
     drawing.Render(svg_renderer);
     svg_renderer.Finalize_Render();
 
-    // Save to file
+    // save to file
     std::ofstream out_file(output_filename);
     if (out_file.is_open()) {
         out_file << svg_output;
@@ -225,13 +225,17 @@ void load_results(const std::string &filename,
 }
 
 void plot_results(const std::string& filename, const std::string& output_folder) {
+
+    // load the results
     std::unordered_map<std::string, std::unordered_map<std::string, std::vector<data_point>>> data;
 
     load_results(filename, data);
 
-    std::vector<std::string> column_labels = {"x", "y", "z"};
-    std::vector<std::string> comp_labels = {"CPU_sequential_vectorized", "CPU_sequential_no_vectorized",
+    std::vector<std::string> column_labels = {"x", "y", "z"}; // columns to plot
+    std::vector<std::string> comp_labels = {"CPU_sequential_vectorized", "CPU_sequential_no_vectorized", // computation types
                                             "CPU_parallel_vectorized", "CPU_parallel_no_vectorized", "GPU"};
+
+    // traverse each column and plot the graphs
     for (const auto &column : column_labels) {
         std::vector<std::vector<double>> x_points_all;
         std::vector<std::vector<double>> y_points_all_time;
@@ -259,20 +263,20 @@ void plot_results(const std::string& filename, const std::string& output_folder)
         }
 
         try {
-            std::string output_filename = output_folder + "time_for_" + column + ".svg";
+            std::string output_filename = output_folder;
             plot_graph(x_points_all, y_points_all_time, comp_labels,
                        "Number of Elements", "Time (s)", "Computation time for column " + column,
-                          output_filename);
+                          output_filename.append("time_for_").append(column).append(".svg"));
             std::cout << "Graph saved to '" << output_filename << "'" << std::endl;
-            output_filename = output_folder + "CV_for_" + column + ".svg";
+            output_filename = output_folder;
             plot_graph(x_points_all, y_points_all_cv, comp_labels,
                        "Number of Elements", "Coefficient of Variation", "Coefficient of Variation for column " + column,
-                       output_filename);
+                       output_filename.append("CV_for_").append(column).append(".svg"));
             std::cout << "Graph saved to '" << output_filename << "'" << std::endl;
-            output_filename = output_folder + "MAD_for_" + column + ".svg";
+            output_filename = output_folder;
             plot_graph(x_points_all, y_points_all_mad, comp_labels,
                        "Number of Elements", "Median Absolute Deviation", "Median Absolute Deviation for column " + column,
-                       output_filename);
+                       output_filename.append("MAD_for_").append(column).append(".svg"));
             std::cout << "Graph saved to '" << output_filename << "'" << std::endl;
         } catch (const std::exception &e) {
             std::cerr << "Error: " << e.what() << std::endl;
