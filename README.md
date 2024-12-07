@@ -10,7 +10,7 @@ Tato semestrální práce se zaměřuje na výpočet dvou statistických ukazate
 - Vektorizovaný výpočet (AVX2)
 - Paralelní výpočet (více vláken)
 - Paralelní a zároveň vektorizovaný výpočet
-- Výpočet na GPU (CUDA)
+- Výpočet na GPU (OpenCL)
 
 Každá varianta je testována na různých velikostech vstupních dat a spouštěna 10× za účelem zjištění mediánu výpočetního času.
 
@@ -18,7 +18,7 @@ Každá varianta je testována na různých velikostech vstupních dat a spoušt
 - CMake ≥ 3.21
 - MSVC 2022 (64bit)
 - C++17 nebo novější
-- Volitelně: CUDA Toolkit (pro GPU variantu)
+- Volitelně: OpenCL SDK (pro GPU variantu)
 
 ## Kompilace
 Použij CMake a Visual Studio nebo příkazovou řádku:
@@ -26,7 +26,7 @@ Použij CMake a Visual Studio nebo příkazovou řádku:
 ```bash
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 cmake --build build --config Release
-````
+```
 
 Pro zapnutí single precision varianty:
 
@@ -53,7 +53,7 @@ cmake -S . -B build -DCMAKE_CXX_FLAGS="-D_FLOAT"
 * `--output <cesta>` – výstupní adresář (výchozí `results`)
 * `--repetitions <n>` – počet opakování každého výpočtu (výchozí 1)
 * `--num_partitions <n>` – počet vláken/paralelních bloků (výchozí 1)
-* `--gpu` – aktivuje GPU variantu
+* `--gpu` – aktivuje GPU variantu (OpenCL)
 * `--parallel` – spustí paralelní variantu na CPU
 * `--vectorized` – zapne AVX2 vektorizaci
 * `--all_variants` – spustí všechny varianty výpočtu najednou
@@ -87,4 +87,4 @@ Program vygeneruje:
 ## Poznámky
 
 * Pro správné fungování je nutné použít 64bitový překladač.
-* Při běhu na GPU se doporučuje systém s podporou CUDA a dostatečnou VRAM.
+* Při běhu na GPU se doporučuje systém s podporou OpenCL a dostatečnou VRAM.
